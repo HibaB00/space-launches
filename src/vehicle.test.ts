@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import { toLaunch, type LL2Launch, type Vehicle } from './launches'
-import { compareToReference, HUMAN_M, inferBoosters, knownEngines, schematicLayout } from './vehicle'
+import { compareToReference, HUMAN_M, inferBoosters, knownEngines, sceneLayout, schematicLayout } from './vehicle'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
 const vehicle = (s: string) => launches.find((l) => l.name.includes(s))!.vehicle
@@ -94,5 +94,20 @@ describe('inferBoosters / knownEngines', () => {
     expect(starship.style).toBe('starship')
     expect(starship.segments.map((s) => s.kind)).toEqual(['stage', 'ship'])
     expect(schematicLayout(vehicle('USSF-153'))!.style).toBe('falcon')
+  })
+})
+
+describe('sceneLayout', () => {
+  test('hero rocket has a fixed hull width and a clamped slenderness', () => {
+    const electron = sceneLayout(vehicle('LOXSAT'))
+    const f9 = sceneLayout(vehicle('USSF-153'))
+    const vega = sceneLayout(vehicle('Sentinel-3C'))
+    expect(electron.body.w).toBe(30)
+    expect(f9.body.h).toBeGreaterThan(electron.body.h)
+    expect(electron.body.h).toBeGreaterThan(vega.body.h)
+    expect(f9.body.h / f9.body.w).toBeLessThanOrEqual(9)
+    expect(vega.body.h / vega.body.w).toBeGreaterThanOrEqual(6.5)
+    expect(sceneLayout(vehicle('Long March 2D/YZ-3')).body.h).toBeGreaterThan(0) // no dimensions → default slenderness
+    expect(sceneLayout(vehicle('MMX')).boosters).toHaveLength(4)
   })
 })

@@ -173,3 +173,48 @@ export function fairingHalvesD(x: number, y: number, w: number, h: number): [str
     `M${x + w},${y + h} L${x + w},${y + h * 0.45} Q${x + w},${y} ${cx},${y} L${cx},${y + h} Z`,
   ]
 }
+
+/**
+ * Not-to-scale scene geometry for the animation: a hero rocket with a fixed hull width and a clamped aspect,
+ * so Electron reads as a slender rocket instead of a line. Segments reuse the typical stage split.
+ */
+export type Scene = { body: Rect; segments: Segment[]; boosters: Rect[]; style: FamilyStyle; ground: number }
+export function sceneLayout(v: Pick<Vehicle, 'name' | 'lengthM' | 'diameterM' | 'stages' | 'boosters' | 'spacecraft'>, cx = 160, ground = 372): Scene {
+  const ratio = v.lengthM && v.diameterM ? v.lengthM / v.diameterM : 14
+  const w = 30
+  // WHY: real slenderness runs from ~11 (Vega-C) to ~19 (Falcon 9); clamped so every rocket fits the same frame.
+  const h = w * Math.min(9, Math.max(6.5, ratio * 0.5))
+  const body: Rect = { x: cx - w / 2, y: ground - h, w, h }
+  const style = familyStyle(v.name)
+  const stages = Math.min(4, Math.max(1, v.stages ?? 2))
+  const segments: Segment[] = []
+  let y = ground
+  if (style === 'starship') {
+    segments.push({ label: 'Super Heavy', kind: 'stage', y: ground - h * 0.58, h: h * 0.58 })
+    segments.push({ label: 'Starship', kind: 'ship', y: ground - h, h: h * 0.42 })
+  } else {
+    const split = STAGE_SPLIT[stages]!
+    split.forEach((frac, i) => {
+      const sh = h * frac
+      y -= sh
+      segments.push({ label: `Stage ${i + 1}`, kind: 'stage', y, h: sh })
+    })
+    const noseH = h * (1 - split.reduce((a, b) => a + b, 0))
+    segments.push({
+      label: v.spacecraft ? v.spacecraft.config || v.spacecraft.name : stages === 1 ? 'Nose' : 'Fairing',
+      kind: v.spacecraft ? 'capsule' : stages === 1 ? 'nose' : 'fairing',
+      y: y - noseH,
+      h: noseH,
+    })
+  }
+  const inferred = inferBoosters(v)
+  const boosters: Rect[] = Array.from({ length: Math.min(4, inferred.count) }, (_, i) => {
+    const side = i % 2 === 0 ? -1 : 1
+    const rank = Math.floor(i / 2)
+    const bw = inferred.kind === 'core' ? w : w * (inferred.kind === 'solid' ? 0.42 : 0.6)
+    const bh = inferred.kind === 'core' ? segments[0]!.h : h * (inferred.kind === 'solid' ? 0.42 : 0.38)
+    const offset = w / 2 + 3 + rank * 3 + bw * rank + bw / 2
+    return { x: cx + side * offset - bw / 2, y: ground - bh, w: bw, h: bh, kind: inferred.kind }
+  })
+  return { body, segments, boosters, style, ground }
+}

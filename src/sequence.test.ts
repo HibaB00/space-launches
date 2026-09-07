@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import { GENERIC_TIMELINE, toLaunch, type LL2Launch } from './launches'
-import { clockAt, flightState, ordinalAt, segmentDuration } from './sequence'
+import { classifyEvent, clockAt, eventTimes, flightState, ordinalAt, ordinalOfTime, segmentDuration, timeOfOrdinal } from './sequence'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
 const f9 = launches.find((l) => l.name.includes('USSF-153'))!.timeline
@@ -60,5 +60,34 @@ describe('flightState', () => {
     expect(flightState(h3, i('SES-2'), true).secondEngine).toBe(true)
     expect(flightState(h3, i('SECO-2'), true).secondEngine).toBe(false)
     expect(flightState(h3, i('Payload Separation'), true).deployed).toBe(true)
+  })
+})
+
+describe('classifyEvent / eventTimes', () => {
+  test('classifies the standard vocabulary, landing burns included', () => {
+    const kinds = f9.map((e) => classifyEvent(e))
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Ignition')]).toBe('ignition')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Liftoff')]).toBe('liftoff')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Max-Q')]).toBe('maxq')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'MECO')]).toBe('meco')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Stage 2 Separation')]).toBe('stageSep')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'SES-1')]).toBe('ses')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Fairing Separation')]).toBe('fairing')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'Stage 1 Landing Burn')]).toBe('landing')
+    expect(kinds[f9.findIndex((e) => e.abbrev === 'GO for Launch')]).toBe('other')
+    const h3 = launches.find((l) => l.name.includes('MMX'))!.timeline
+    expect(classifyEvent(h3.find((e) => /Boosters Separation/.test(e.abbrev))!)).toBe('boosterSep')
+    expect(classifyEvent(h3.find((e) => e.abbrev === 'SECO-2')!)).toBe('seco')
+    expect(classifyEvent(h3.find((e) => e.abbrev === 'Payload Separation')!)).toBe('deploy')
+  })
+  test('event times accumulate segment durations and invert cleanly', () => {
+    const times = eventTimes(f9)
+    expect(times[0]).toBe(0)
+    expect(times[1]).toBe(0.8)
+    const liftoff = f9.findIndex((e) => e.abbrev === 'Liftoff')
+    expect(times[liftoff + 1]! - times[liftoff]!).toBeCloseTo(2.4, 9)
+    for (const o of [0, 0.5, 3.25, f9.length - 1]) expect(ordinalOfTime(times, times[Math.floor(o)]! + (o % 1) * (times[Math.floor(o) + 1]! - times[Math.floor(o)]!) || 0)).toBeCloseTo(o, 6)
+    expect(ordinalOfTime(times, 9999)).toBe(f9.length - 1)
+    for (const o of [0, 1.5, 7.25, f9.length - 1]) expect(ordinalOfTime(times, timeOfOrdinal(times, o))).toBeCloseTo(o, 6)
   })
 })

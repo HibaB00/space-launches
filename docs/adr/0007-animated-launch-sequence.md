@@ -23,3 +23,7 @@ The static event bar (ADR-0005 era) was judged "weird and not useful", especiall
 - The animation is schematic, not physical: no trajectory, no altitude, no timing beyond the published offsets. Labelled as preview / compressed time.
 - Timelines that lack an event (booster separation, fairing) fall back to rules (boosters gone by MECO or staging; fairing gone by SECO).
 - Reduced motion disables timers and transitions; users step by clicking events.
+
+## Addendum (2026-09-07, later): motion moved to GSAP
+
+The first cut drove CSS transitions from React state and looked stiff ("a bit goofy"). Physical accuracy is unavailable pre-launch (no trajectories or telemetry are published), so the upgrade is craft, not data: the timeline now lives in **GSAP** (free including plugins since 2025), which gives a scrubbable master timeline with a beat per event, eased separations, a flickering plume, a camera that lets the pad fall away and Earth's limb rise, and live sync by tweening to the real clock. The rocket is drawn **not to scale** for the animation (`sceneLayout`) while the Vehicle panel's schematic stays to scale; both say so. Alternatives weighed: Motion (React springs; weaker for one scrubbable timeline), Rive/Lottie (best looking, but hand-authored per vehicle, not data-driven), procedural 3D in Three.js (more convincing still; the next step if wanted, two to three days).

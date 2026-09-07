@@ -71,3 +71,47 @@ export function flightState(events: TimelineEvent[], idx: number, hasBoosters: b
     landed: passed(/landing(?! burn)/i),
   }
 }
+
+export type EventKind = 'ignition' | 'liftoff' | 'maxq' | 'boosterSep' | 'meco' | 'stageSep' | 'ses' | 'seco' | 'fairing' | 'deploy' | 'landing' | 'other'
+
+/** Which animation beat an event triggers. Order matters: "Stage 1 Landing Burn" is a landing beat, not staging. */
+export function classifyEvent(e: TimelineEvent): EventKind {
+  const t = text(e)
+  if (/landing/i.test(t)) return 'landing'
+  if (/fairing/i.test(t)) return 'fairing'
+  if (/deploy|payload sep|spacecraft sep/i.test(t)) return 'deploy'
+  if (/booster.*sep|side core|\bSRB/i.test(t)) return 'boosterSep'
+  if (/\bSECO(?:-\d)?\b/i.test(t)) return 'seco'
+  if (/\bSES-?\d\b|second engine start|second stage ignition/i.test(t)) return 'ses'
+  if (/stage ?2 sep|stage sep|stage separation|staging|stage ?1 sep/i.test(t)) return 'stageSep'
+  if (/\bMECO\b|main engine cut/i.test(t)) return 'meco'
+  if (/max-?q/i.test(t)) return 'maxq'
+  if (/liftoff|lift-off/i.test(t)) return 'liftoff'
+  if (/ignition/i.test(t)) return 'ignition'
+  return 'other'
+}
+
+/** Cumulative playback time (s) at which each event starts, from the per-segment durations. */
+export function eventTimes(events: TimelineEvent[]): number[] {
+  const times = [0]
+  for (let i = 1; i < events.length; i++) times.push(times[i - 1]! + segmentDuration(events, i - 1))
+  return times
+}
+
+/** Playback time → ordinal position, inverse of eventTimes. */
+export function ordinalOfTime(times: number[], t: number): number {
+  const n = times.length
+  if (n < 2) return 0
+  if (t <= 0) return 0
+  if (t >= times[n - 1]!) return n - 1
+  const i = times.findIndex((s, k) => t >= s && t < times[k + 1]!)
+  return i + (t - times[i]!) / (times[i + 1]! - times[i]!)
+}
+
+/** Ordinal position → playback time, inverse of ordinalOfTime. */
+export function timeOfOrdinal(times: number[], ordinal: number): number {
+  const n = times.length
+  const i = Math.max(0, Math.min(n - 2, Math.floor(ordinal)))
+  const f = Math.max(0, Math.min(1, ordinal - i))
+  return n < 2 ? 0 : times[i]! + f * (times[i + 1]! - times[i]!)
+}
