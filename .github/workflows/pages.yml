@@ -1,0 +1,48 @@
+# Builds the static site with fresh launch data and deploys it to GitHub Pages.
+# Data is fetched here, at build time, so visitors never call Launch Library (docs/adr/0002-scheduled-build-fetch.md).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # ponytail: every 30 min ≈ 1,400 Actions-minutes/month on a private repo (2,000 free). Go hourly or make
+    # the repo public if it bites. Also: GitHub pauses scheduled workflows after 60 days without a push.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+# WHY: the deploy job needs to write Pages and mint an OIDC token; everything else stays read-only.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# WHY: if a push lands while a cron run is in flight, keep only the newest run.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      # WHY: a failed fetch exits non-zero and stops the job here, so the previous deployment stays live.
+      - run: bun run fetch
+      - run: bun run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
