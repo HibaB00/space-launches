@@ -50,6 +50,15 @@ A static website: a live countdown to each of the next 20 orbital launches world
 
 _Added 2026-09-07 evening after Hiba's review of the first build: "no images, it should be a separate page with a trajectory animation, it is so plain"._
 
+35. As a visitor, I want the launch page to show the launch sequence as a SpaceX-style bar of events (propellant load, ignition, liftoff, Max-Q, MECO, staging, SECO, deploy) with a marker at "now", so that I follow a launch the way the webcast presents it.
+36. As a visitor, I want to see the mission log of schedule changes and confirmations, so that I know how firm a date is and why it moved.
+37. As a visitor, I want status shown in traffic-light colours and live elements in one accent colour, on colour photos, so that the page reads as a control centre rather than a document.
+38. As a visitor, I want "Add to Google Calendar" to open a prefilled event, so that one click gets the launch into my calendar.
+39. As a visitor, I want a Vehicle panel with the rocket's specs, record, what is flying today (booster serial, flight number, landing plan, capsule and crew) and a to-scale schematic next to a person and a Falcon 9, so that I understand what the rocket is and how it is composed.
+40. As a visitor, I want inland launch sites to visibly sit on land on the globe, so that the map is not misleading.
+
+_Added 2026-09-07, later: "more of a control centre, full width, a bit of colour", "it should not be a globe, check how SpaceX does the steps", "add to calendar should open Google Calendar", "design of the rocket itself and how it is composed", "why does it look like it is in the middle of the ocean"._
+
 ## Implementation Decisions
 
 - **Data source**: Launch Library 2 v2.3.0 (The Space Devs), endpoint `launches/upcoming` with `mode=detailed`, `hide_recent_previous=true`, `limit=20`. No key. Rate limit 15 req/hr per IP.

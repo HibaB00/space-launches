@@ -24,3 +24,4 @@ The launch page's globe faces the pad and animates an **illustrative** ascent: t
 ## Comments
 
 - 2026-09-07 — Done. Launch page globe gets `trajectory={lat, lon, orbitAbbrev}`; bright ascent line, dim orbit line, moving head revealed via `setDrawRange`, loops with a pause; reduced-motion shows the full static path. Caption states inclination and 'not flight data'. Also on the page: Watch live button, YouTube embed (nocookie) when applicable, Add to calendar (.ics with 15-min alarm), pad map link, facts, photo credit, mission patch.
+- 2026-09-07 — Superseded the same day: Hiba found the drawn orbit "weird" and asked for SpaceX-style launch steps instead. Replaced by the Launch sequence timeline (ticket 11). The globe stays as the launch-site panel without trajectories.

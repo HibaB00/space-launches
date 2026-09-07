@@ -1,6 +1,6 @@
 # ADR-0004: Three.js used directly for the globe; illustrative trajectories
 
-Date: 2026-09-07 · Status: accepted
+Date: 2026-09-07 · Status: accepted (trajectory drawing **superseded** the same day, see below)
 
 ## Context
 
@@ -20,3 +20,7 @@ Hiba wanted a 3D centrepiece: a globe of launch sites, and on each launch page a
 - `geo.ts` is pure and tested (orthonormal frames, headings, inclination floor, arc decoding on the real file); `Globe.tsx` is untested imperative glue.
 - Drag-to-rotate via OrbitControls (rotate only). The camera eases to face the focused pad; once it arrives the user owns the camera.
 - Compressed radii (LEO 1.08 R, GTO apogee 1.9 R vs the real 6.6 R) so everything fits in a square panel. Documented in code.
+
+## Superseded in part (2026-09-07, later)
+
+The illustrative ascent-and-orbit animation was removed after Hiba's review ("the animation for the launch is weird, it should not be a globe; check how SpaceX does the steps for a launch"). It was replaced by the **Launch sequence** timeline built from Launch Library's published `timeline` events (ADR-0006 era, ticket 11), which is real data, and the globe remains as the launch-site panel (pads, focus marker, coastlines, and a precomputed land dot grid so inland pads read as land). The orbit maths (`orbitProfile`, `orbitFrame`, `trajectoryPoints`) was deleted rather than left unused; the aerospace facts it encoded (inclination ≥ pad latitude, retrograde SSO) live on in `CONTEXT.md`.

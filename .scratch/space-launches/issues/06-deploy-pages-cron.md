@@ -24,3 +24,4 @@ Blocked by: 04, 05
 ## Comments
 
 - 2026-09-07 — Workflow committed. Remaining steps are Hiba's (no pushing from the agent): `git push`, then enable Pages with source "GitHub Actions" (`gh api -X POST repos/HibaB00/space-launches/pages -f build_type=workflow` or Settings → Pages), then watch the first run in the Actions tab.
+- 2026-09-07 — Workflow unchanged and still valid for revision 2 (fetch also writes launches.ics; build copies 404.html). Waiting on Hiba: `git push`, then enable Pages (source: GitHub Actions).

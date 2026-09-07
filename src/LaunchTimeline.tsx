@@ -74,7 +74,9 @@ export function LaunchTimeline({ launch, now }: { launch: Launch; now: number })
           : nextIdx === null
             ? 'Sequence complete.'
             : nextIdx === 0
-              ? `Sequence begins at ${formatOffset(events[0]!.offsetSec)} · ${formatCountdown((events[0]!.offsetSec - tSec) * 1000)}`
+              ? events[0]!.offsetSec === 0
+                ? `Liftoff · ${formatCountdown(-tSec * 1000)}`
+                : `Sequence begins at ${formatOffset(events[0]!.offsetSec)} · ${formatCountdown((events[0]!.offsetSec - tSec) * 1000)}`
               : `Next · ${events[nextIdx]!.abbrev} · ${formatOffset(events[nextIdx]!.offsetSec)} · in ${formatOffset(events[nextIdx]!.offsetSec - tSec).slice(2)}`}
       </p>
     </div>
