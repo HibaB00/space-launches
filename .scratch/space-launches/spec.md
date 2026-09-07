@@ -41,6 +41,14 @@ A static website: a live countdown to each of the next 20 orbital launches world
 26. As the owner, I want every non-obvious decision recorded (ADRs, `// WHY:` comments, a glossary, a Learn section per ticket), so that I can learn from the project later.
 27. As the owner, I want the aerospace vocabulary used in the UI defined in a glossary, so that I learn the domain as I build.
 28. As the owner, I want the pure logic (record mapping, countdown rules, lat/long math) covered by tests, so that the only non-trivial code is verified.
+29. As a visitor, I want to see a photo of the rocket for each launch, so that the page feels alive and I recognise vehicles.
+30. As a visitor, I want each launch to have its own page with its own URL, so that I can open it directly, share it, and use the browser's back button.
+31. As a visitor, I want the launch page to show an animation of the ascent into orbit on the globe, so that I get an intuition for where and how the rocket flies.
+32. As a visitor, I want that animation labelled as illustrative, so that I don't mistake it for flight data.
+33. As a visitor, I want the mission patch shown when one exists, so that I see the mission's own identity.
+34. As a visitor, I want image credits shown, so that photographers and agencies are attributed.
+
+_Added 2026-09-07 evening after Hiba's review of the first build: "no images, it should be a separate page with a trajectory animation, it is so plain"._
 
 ## Implementation Decisions
 
@@ -51,6 +59,9 @@ A static website: a live countdown to each of the next 20 orbital launches world
 - **Stack**: React 19, TypeScript, Vite 8 (`base: /space-launches/`), Tailwind v4, shadcn/ui components copied in (Table, Badge, Card, Separator only), dark-only neutral theme, radius 0, Geist Mono. Bun for install and tests.
 - **State**: `launches`, `selectedId` in App state. One `useNow()` 1-second clock. `useLaunches()` fetches on mount and every 10 minutes. Everything else derived during render (Vercel `rerender-derived-state-no-effect`).
 - **Globe**: Three.js used directly in a `useEffect` (not react-three-fiber), lazy-loaded, memoised, receives `pads` and `selectedId` only so the clock tick never re-renders it. Coastlines from `world-atlas` land-110m TopoJSON.
+- **Routing**: React Router, `BrowserRouter` with `basename` = Vite base; routes `/` and `/launch/:id`; `dist/404.html` copy of `index.html` for GitHub Pages deep links.
+- **Imagery**: LL2 `image` (url, thumbnail, credit, licence) and `mission_patches`; credit shown with every photo; gradient scrim under text on photos.
+- **Trajectory**: illustrative only. `orbitProfile(orbitAbbrev, padLat)` gives inclination (never below pad latitude; SSO 97.5°), perigee/apogee (compressed radii), escape flag. `orbitFrame` builds pad/velocity/normal vectors; `trajectoryPoints` draws ascent (30° downrange) then one orbit. Labelled "not flight data".
 - **Deploy**: GitHub Pages via Action (setup-bun → install → fetch → build → upload → deploy). Private repo initially.
 - **Tracking**: this spec and tickets in `.scratch/space-launches/`; one Linear issue per phase; Obsidian project note for the learning log.
 - **Out of v1**: notifications, .ics, past launches, accounts, database, theme toggle, provider filter, glossary tooltips. Hardware is a separate project.

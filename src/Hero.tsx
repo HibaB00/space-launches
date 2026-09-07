@@ -1,46 +1,58 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { countdownMode, countdownText, type Launch } from './launches'
+import { Link } from 'react-router'
+import { buttonVariants } from '@/components/ui/button'
+import { countdownMode, countdownText, siteName, type Launch } from './launches'
+import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
 import { LOCAL, UTC } from './time'
 
-const PRECISION_NOTE: Record<string, string> = {
-  HR: '±1\u00a0h · T-0 known to the hour',
-  MIN: 'T-0 known to the minute',
-}
-
+/** The nearest launch, always. Selection never moves this: a launch you pick opens its own page. */
 export function Hero({ launch, now }: { launch: Launch; now: number }) {
   const mode = countdownMode(launch, now)
   const net = new Date(launch.net)
+  const label = mode === 'tplus' ? 'Liftoff · awaiting update' : mode === 'hold' ? 'Countdown holding' : 'Next launch'
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-3 text-xs font-normal uppercase tracking-widest text-muted-foreground">
-          {mode === 'tplus' ? 'Liftoff · awaiting update' : mode === 'hold' ? 'Countdown holding' : 'Next launch'}
+    <section aria-labelledby="next-launch" className="relative isolate flex min-h-[26rem] flex-col justify-end overflow-hidden border border-border">
+      <Photo image={launch.image} alt="" eager width={1600} height={1000} className="absolute inset-0 -z-20 h-full w-full object-cover opacity-60 grayscale" />
+      {/* WHY: a scrim. Text over an unknown photo has no guaranteed contrast; a gradient from the page colour up to
+          near-transparent gives the countdown a dark floor whatever the picture is. */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-background via-background/75 to-background/5" />
+      <div className="space-y-3 p-6 sm:p-8">
+        <p id="next-launch" className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground">
+          {label}
           <StatusBadge status={launch.status} />
-          {PRECISION_NOTE[launch.netPrecision] && mode === 'tick' ? (
-            <span className="normal-case tracking-normal">{PRECISION_NOTE[launch.netPrecision]}</span>
-          ) : null}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-4xl sm:text-5xl">
+          {launch.netPrecision === 'HR' && mode === 'tick' ? <span className="normal-case tracking-normal">±1{' '}h · T-0 known to the hour</span> : null}
+        </p>
+        <p className="text-5xl sm:text-6xl">
           {countdownText(launch, now)}
           <span className="cursor" aria-hidden="true">
             ▌
           </span>
         </p>
-        <p className="break-words text-lg" translate="no">
+        <h2 className="text-lg sm:text-xl" translate="no">
           {launch.rocket} <span className="text-muted-foreground">·</span> {launch.mission.name}
-        </p>
+        </h2>
         <p className="text-sm text-muted-foreground">
-          {launch.pad.name} — {launch.pad.location} · {launch.providerAbbrev || launch.provider}
+          {launch.pad.name} · {siteName(launch)} · {launch.pad.country} · {launch.providerAbbrev || launch.provider}
         </p>
         {mode === 'net-date' ? null : (
           <p className="text-sm text-muted-foreground">
             <time dateTime={launch.net}>{LOCAL.format(net)}</time> · {UTC.format(net)} UTC
           </p>
         )}
-      </CardContent>
-    </Card>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Link to={`/launch/${launch.id}`} className={buttonVariants()}>
+            Details →
+          </Link>
+          {launch.webcast ? (
+            <a href={launch.webcast} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+              Watch live ↗
+            </a>
+          ) : null}
+        </div>
+      </div>
+      {launch.image?.credit ? (
+        <p className="absolute right-3 top-3 text-[10px] uppercase tracking-widest text-muted-foreground">photo · {launch.image.credit}</p>
+      ) : null}
+    </section>
   )
 }

@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import {
+  siteName,
+  youtubeEmbedUrl,
   countdownText,
   countdownMode,
   formatCountdown,
@@ -43,6 +45,16 @@ describe('toLaunch', () => {
     expect(l.pad.lat).toBeCloseTo(45.996, 2)
     // WHY: two streams exist (YouTube priority 10, NASA+ priority 12); the highest priority wins.
     expect(l.webcast).toBe('https://plus.nasa.gov/scheduled-video/progress-96-cargo-ship-launch/')
+    expect(l.image?.url).toMatch(/^https:\/\//)
+    expect(l.image?.thumb).toMatch(/thumbnail/)
+    expect(l.image?.credit).toBe('Roscosmos')
+    expect(l.image?.license).toBe('Roscosmos Image Use Policy')
+  })
+
+  test('takes the highest-priority mission patch when there is one', () => {
+    const raw = raws.find((r) => r.mission_patches && r.mission_patches.length > 0)!
+    expect(toLaunch(raw).patch).toMatch(/^https:\/\/.*mission_patch/)
+    expect(toLaunch({ ...raw, mission_patches: null }).patch).toBeNull()
   })
 
   test('builds a map URL from coordinates when the API has none', () => {
@@ -52,7 +64,7 @@ describe('toLaunch', () => {
   })
 
   test('degrades gracefully when mission, precision and media are missing', () => {
-    const raw = { ...raws[0], mission: null, net_precision: null, image: null, vid_urls: [], info_urls: [] }
+    const raw = { ...raws[0], mission: null, net_precision: null, image: null, mission_patches: [], vid_urls: [], info_urls: [] }
     const l = toLaunch(raw)
     expect(l.mission).toEqual({ name: 'Unknown payload', description: '', type: 'Unknown', orbit: 'Unknown', orbitAbbrev: '' })
     expect(l.netPrecision).toBe('')
@@ -137,5 +149,18 @@ describe('countdownText', () => {
     expect(countdownText(l('2026-09-07T11:59:00Z', 'SEC'), now)).toBe('T+00d 00h 01m 00s')
     expect(countdownText(l('2026-09-30T00:00:00Z', 'M'), now)).toBe('NET Sep 2026')
     expect(countdownText(l('2026-09-08T00:00:00Z', 'SEC', 'Hold'), now)).toBe('HOLD')
+  })
+})
+
+describe('siteName / youtubeEmbedUrl', () => {
+  test('site name is the part before the first comma', () => {
+    expect(siteName(byName('Progress MS-35'))).toBe('Baikonur Cosmodrome')
+  })
+  test('recognises the YouTube URL shapes and nothing else', () => {
+    expect(youtubeEmbedUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+    expect(youtubeEmbedUrl('https://youtu.be/dQw4w9WgXcQ?t=1')).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+    expect(youtubeEmbedUrl('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+    expect(youtubeEmbedUrl('https://plus.nasa.gov/scheduled-video/x/')).toBeNull()
+    expect(youtubeEmbedUrl(null)).toBeNull()
   })
 })

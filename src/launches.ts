@@ -26,7 +26,13 @@ export type LL2Launch = {
     country: { name: string } | null
     location: { name: string; timezone_name: string | null; country?: { name: string } | null }
   }
-  image: { image_url: string } | null
+  image: {
+    image_url: string
+    thumbnail_url: string | null
+    credit: string | null
+    license: { name: string; link: string | null } | null
+  } | null
+  mission_patches?: { name: string; image_url: string; priority?: number }[] | null
   vid_urls?: { url: string; priority?: number }[] | null
   info_urls?: { url: string }[] | null
 }
@@ -54,7 +60,10 @@ export type Launch = {
     timezone: string
     mapUrl: string
   }
-  image: string | null
+  /** Rocket/launch photo from LL2, with its credit and licence name: shown wherever the photo is. */
+  image: { url: string; thumb: string; credit: string; license: string } | null
+  /** Mission patch artwork, when the mission has one. */
+  patch: string | null
   webcast: string | null
   infoUrl: string | null
 }
@@ -93,7 +102,16 @@ export function toLaunch(raw: LL2Launch): Launch {
       timezone: raw.pad.location.timezone_name ?? 'UTC',
       mapUrl,
     },
-    image: raw.image?.image_url ?? null,
+    image: raw.image
+      ? {
+          url: raw.image.image_url,
+          thumb: raw.image.thumbnail_url ?? raw.image.image_url,
+          // WHY: LL2 images carry their own credit and licence; showing them is the condition of using them.
+          credit: raw.image.credit ?? '',
+          license: raw.image.license?.name ?? '',
+        }
+      : null,
+    patch: [...(raw.mission_patches ?? [])].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0]?.image_url ?? null,
     webcast: vids[0]?.url ?? null,
     infoUrl: raw.info_urls?.[0]?.url ?? null,
   }
@@ -154,4 +172,21 @@ export function countdownText(launch: Launch, now: number): string {
     case 'hold':
       return 'HOLD'
   }
+}
+
+/** "Jiuquan Satellite Launch Center" from "Jiuquan Satellite Launch Center, People's Republic of China". */
+export function siteName(launch: Launch): string {
+  return launch.pad.location.split(',')[0]!.trim()
+}
+
+/** Embed URL for a YouTube webcast, or null when the webcast is hosted elsewhere. */
+export function youtubeEmbedUrl(url: string | null): string | null {
+  if (!url) return null
+  const m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|live\/|embed\/)|youtu\.be\/)([\w-]{11})/)
+  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null
+}
+
+/** Pad coordinates for the globe; launches without published coordinates are left out. */
+export function padsOf(launches: Launch[]): { id: string; lat: number; lon: number }[] {
+  return launches.flatMap((l) => (l.pad.lat !== null && l.pad.lon !== null ? [{ id: l.id, lat: l.pad.lat, lon: l.pad.lon }] : []))
 }

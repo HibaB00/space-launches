@@ -11,7 +11,7 @@ export const LOCAL = new Intl.DateTimeFormat(undefined, {
 })
 
 /** Coordinated Universal Time: what every launch provider and coverage quotes. */
-export const UTC = new Intl.DateTimeFormat('en-GB', {
+export const UTC = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   month: 'short',
   hour: '2-digit',
@@ -20,7 +20,7 @@ export const UTC = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 })
 
-export const UTC_TIME = new Intl.DateTimeFormat('en-GB', {
+export const UTC_TIME = new Intl.DateTimeFormat('en-US', {
   hour: '2-digit',
   minute: '2-digit',
   hourCycle: 'h23',

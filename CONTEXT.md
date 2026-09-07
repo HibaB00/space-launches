@@ -22,7 +22,22 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Mission type**: LL2 taxonomy: Communications, Earth Science, Navigation, Human Exploration, Resupply, Test Flight, Dedicated Rideshare, Government/Top Secret, Unknown…
 - **Orbit abbreviations**: **LEO** low Earth orbit (~160–2000 km; ISS, Starlink). **SSO** sun-synchronous orbit (polar-ish LEO that passes over any point at the same local solar time; Earth observation). **GTO** geostationary transfer orbit (elliptical, the payload raises itself to **GEO** at 35,786 km). **MEO** medium (GPS). **PO** polar orbit (inclination ~90°, covers the whole globe). **TLI** trans-lunar injection. **Mars**: LL2 uses the destination body as the "orbit" for interplanetary missions. **Sub** / sub-orbital: doesn't complete an orbit. **N/A**: unknown or undisclosed payload.
 
+## Trajectory (illustrative, see ADR-0004)
+
+- **Inclination**: the angle between the orbital plane and the equator. A launch site can only reach inclinations ≥ its own latitude without a costly plane change, so equatorial sites (Kourou, 5°N) are prized and ISS flies at 51.6° to be reachable from Baikonur (46°N).
+- **Prograde / retrograde**: with or against Earth's rotation. Prograde launches head east (north-east from the Cape); **SSO** is slightly retrograde (~97.5°) so its plane precesses once a year, which is why SSO flights head south from Vandenberg, Jiuquan and Mahia.
+- **Launch azimuth**: the compass heading at liftoff; set by the target inclination and the pad latitude.
+- **Insertion**: the moment the vehicle reaches orbital velocity; we draw it 30° downrange, roughly where real upper stages cut off.
+- **GTO → GEO**: the rocket leaves the satellite in an ellipse (perigee low, apogee at 35,786 km); the satellite's own engine circularises at apogee.
+
 ## Project / software terms
+
+- **Route / basename**: a client-side URL pattern (`/launch/:id`); `basename` is the sub-path the app lives under on GitHub Pages.
+- **SPA fallback**: a static host's 404 page that is a copy of the app, so deep links to client routes still load.
+- **Scrim**: a gradient under text placed over a photo, guaranteeing contrast regardless of the image.
+- **Link card**: a whole card that is one `<a>`, so it works with middle-click, keyboard and screen readers.
+- **iCalendar / .ics (RFC 5545)**: the text format calendars import or subscribe to; `UID` identifies an event across updates, `VALARM` is the reminder, lines fold at 75 octets.
+- **Occluder**: a solid object drawn just under a wireframe so the far side is hidden by the depth test.
 
 - **Launch (view model)**: the trimmed record our UI reads (`src/launches.ts`), produced from an LL2 record by `toLaunch()` in the fetch script. Upstream shape never reaches the browser.
 - **Build-time data / JAMstack**: data is fetched when the site is built, not when a visitor loads it. The site is static; a scheduled rebuild makes it "dynamic".
