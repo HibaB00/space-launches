@@ -35,7 +35,18 @@ export type LL2Launch = {
   mission_patches?: { name: string; image_url: string; priority?: number }[] | null
   vid_urls?: { url: string; priority?: number }[] | null
   info_urls?: { url: string }[] | null
+  /** Countdown and flight events with ISO-8601 offsets from T-0, e.g. "-PT38M", "P0D", "PT2M26S". Detailed mode only. */
+  timeline?: { type: { abbrev: string; description: string }; relative_time: string }[] | null
+  updates?: { comment: string; created_by: string; created_on: string; info_url: string | null }[] | null
+  program?: { name: string }[] | null
+  flightclub_url?: string | null
+  orbital_launch_attempt_count_year?: number | null
+  pad_launch_attempt_count?: number | null
+  agency_launch_attempt_count_year?: number | null
 }
+
+export type TimelineEvent = { abbrev: string; description: string; offsetSec: number }
+export type LaunchUpdate = { comment: string; by: string; at: string; url: string | null }
 
 /** What the UI reads. Produced once by the fetch script, shipped as public/launches.json. */
 export type Launch = {
@@ -66,6 +77,42 @@ export type Launch = {
   patch: string | null
   webcast: string | null
   infoUrl: string | null
+  /** Provider-published sequence, oldest first. Empty when the provider hasn't published one. */
+  timeline: TimelineEvent[]
+  /** Status updates from LL2 editors, newest first (max 8). */
+  updates: LaunchUpdate[]
+  program: string[]
+  flightClub: string | null
+  attempt: { orbitalYear: number | null; pad: number | null; agencyYear: number | null }
+}
+
+// WHY: official names are long for a card ("United States of America"); everything else already reads fine.
+const SHORT_COUNTRY: Record<string, string> = {
+  'United States of America': 'USA',
+  'Russian Federation': 'Russia',
+  "People's Republic of China": 'China',
+  'Republic of Korea': 'South Korea',
+}
+
+/** ISO-8601 duration → seconds. LL2 uses "-PT38M", "PT2M26S", "PT1H2M3S", "P0D". */
+export function parseIsoDuration(iso: string): number {
+  const m = iso.match(/^(-)?P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/)
+  if (!m) return NaN
+  const [, neg, d, h, min, sec] = m
+  const total = Number(d ?? 0) * 86_400 + Number(h ?? 0) * 3_600 + Number(min ?? 0) * 60 + Number(sec ?? 0)
+  return neg ? -total : total
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** "T-38:00", "T+02:26", "T+1:02:03": the webcast clock format. */
+export function formatOffset(sec: number): string {
+  const sign = sec < 0 ? 'T-' : 'T+'
+  const t = Math.round(Math.abs(sec))
+  const h = Math.floor(t / 3_600)
+  const m = Math.floor((t % 3_600) / 60)
+  const s = t % 60
+  return `${sign}${h > 0 ? `${h}:` : ''}${pad2(m)}:${pad2(s)}`
 }
 
 export function toLaunch(raw: LL2Launch): Launch {
@@ -98,7 +145,7 @@ export function toLaunch(raw: LL2Launch): Launch {
       lat,
       lon,
       location: raw.pad.location.name,
-      country: raw.pad.country?.name ?? raw.pad.location.country?.name ?? '',
+      country: shortCountry(raw.pad.country?.name ?? raw.pad.location.country?.name ?? ''),
       timezone: raw.pad.location.timezone_name ?? 'UTC',
       mapUrl,
     },
@@ -114,8 +161,38 @@ export function toLaunch(raw: LL2Launch): Launch {
     patch: [...(raw.mission_patches ?? [])].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0]?.image_url ?? null,
     webcast: vids[0]?.url ?? null,
     infoUrl: raw.info_urls?.[0]?.url ?? null,
+    timeline: (raw.timeline ?? [])
+      .map((e) => ({ abbrev: e.type.abbrev, description: e.type.description, offsetSec: parseIsoDuration(e.relative_time) }))
+      .filter((e) => !Number.isNaN(e.offsetSec))
+      .sort((a, b) => a.offsetSec - b.offsetSec),
+    updates: [...(raw.updates ?? [])]
+      .sort((a, b) => Date.parse(b.created_on) - Date.parse(a.created_on))
+      .slice(0, 8)
+      .map((u) => ({ comment: u.comment, by: u.created_by, at: u.created_on, url: u.info_url })),
+    program: (raw.program ?? []).map((p) => p.name),
+    flightClub: raw.flightclub_url ?? null,
+    attempt: {
+      orbitalYear: raw.orbital_launch_attempt_count_year ?? null,
+      pad: raw.pad_launch_attempt_count ?? null,
+      agencyYear: raw.agency_launch_attempt_count_year ?? null,
+    },
   }
 }
+
+// WHY: most providers publish no sequence. A generic orbital profile, clearly labelled, still teaches the shape
+// of a launch (Max-Q, MECO, staging, SECO, deploy). Offsets are typical for a two-stage medium-lift rocket.
+export const GENERIC_TIMELINE: TimelineEvent[] = [
+  { abbrev: 'Liftoff', description: 'First upward movement of the rocket', offsetSec: 0 },
+  { abbrev: 'Max-Q', description: 'Maximum aerodynamic pressure on the vehicle', offsetSec: 70 },
+  { abbrev: 'MECO', description: 'Main engine cut-off: the first stage stops burning', offsetSec: 160 },
+  { abbrev: 'Stage sep', description: 'The first stage separates from the second', offsetSec: 165 },
+  { abbrev: 'SES-1', description: 'First start of the second-stage engine', offsetSec: 172 },
+  { abbrev: 'Fairing sep', description: 'The payload fairing is jettisoned once the air is thin enough', offsetSec: 200 },
+  { abbrev: 'SECO-1', description: 'Second-stage engine cut-off: orbital velocity reached', offsetSec: 510 },
+  { abbrev: 'Deploy', description: 'Payload separation from the second stage', offsetSec: 1_200 },
+]
+
+const shortCountry = (name: string) => SHORT_COUNTRY[name] ?? name
 
 export type CountdownMode = 'tick' | 'tplus' | 'net-date' | 'hold'
 
@@ -128,8 +205,6 @@ export function countdownMode(launch: Launch, now: number): CountdownMode {
   if (!FINE_PRECISION.has(launch.netPrecision)) return 'net-date'
   return Date.parse(launch.net) <= now ? 'tplus' : 'tick'
 }
-
-const pad2 = (n: number) => String(n).padStart(2, '0')
 
 /** `T-02d 04h 17m 33s`; negative input counts up as `T+…`. Fixed width so the digits don't jitter. */
 export function formatCountdown(remainingMs: number): string {

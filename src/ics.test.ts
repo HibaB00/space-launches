@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
-import { feedIcs, launchIcs } from './ics'
+import { feedIcs, googleCalendarUrl, launchIcs } from './ics'
 import { toLaunch, type LL2Launch } from './launches'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
@@ -29,6 +29,16 @@ describe('ics', () => {
     const ics = launchIcs(l, STAMP)
     expect(ics).toContain('SUMMARY:Soyuz 2.1b · A\\; B\\, C')
     expect(ics).toContain('DESCRIPTION:line one\\nline two')
+  })
+  test('Google Calendar link carries the same event', () => {
+    const url = new URL(googleCalendarUrl(launches[0], STAMP))
+    expect(url.origin + url.pathname).toBe('https://calendar.google.com/calendar/render')
+    expect(url.searchParams.get('action')).toBe('TEMPLATE')
+    expect(url.searchParams.get('dates')).toBe('20260909T161503Z/20260909T171503Z')
+    expect(url.searchParams.get('text')).toBe('Soyuz 2.1b · Progress MS-35 (96P)')
+    expect(url.searchParams.get('details')).toContain('Watch live: https://plus.nasa.gov/')
+    const crew = launches.find((l) => l.mission.name === 'Crew-13')!
+    expect(new URL(googleCalendarUrl(crew, STAMP)).searchParams.get('dates')).toBe('20260930/20261001')
   })
   test('lines are folded at 75 octets with CRLF', () => {
     const ics = feedIcs(launches, STAMP)

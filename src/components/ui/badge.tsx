@@ -8,12 +8,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        // WHY: a weight scale in greys instead of colours. GO solid, TBC strong outline, TBD dim outline,
-        // HOLD solid and pulsing (motion-safe: respects prefers-reduced-motion). The site has no colour at all.
-        default: "bg-foreground text-background",
-        secondary: "border-foreground/70 text-foreground",
-        destructive: "bg-foreground text-background motion-safe:animate-pulse",
-        outline: "border-border text-muted-foreground",
+        // WHY: traffic-light semantics from launch control. GO green (T-0 confirmed), TBC/TBD amber (not firm),
+        // HOLD red and pulsing (motion-safe respects prefers-reduced-motion). Colour appears only where it means something.
+        default: "bg-go text-background",
+        secondary: "border-caution text-caution",
+        destructive: "bg-nogo text-background motion-safe:animate-pulse",
+        outline: "border-caution/50 text-caution/80",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",

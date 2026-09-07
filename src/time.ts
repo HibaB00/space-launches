@@ -50,3 +50,8 @@ export function padLocal(timeZone: string): Intl.DateTimeFormat {
   }
   return f
 }
+
+/** Header clocks: seconds included, 24-hour, so the page reads like a control-room wall clock. */
+export const UTC_CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: 'UTC' })
+export const LOCAL_CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'short' })
+export const LOG_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

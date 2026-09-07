@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import {
+  formatOffset,
+  parseIsoDuration,
   siteName,
   youtubeEmbedUrl,
   countdownText,
@@ -41,6 +43,7 @@ describe('toLaunch', () => {
     expect(l.mission.orbitAbbrev).toBe('LEO')
     expect(l.pad.location).toContain('Baikonur')
     expect(l.pad.country).toBe('Kazakhstan')
+    expect(byName('USSF-153').pad.country).toBe('USA')
     expect(l.pad.timezone).toBe('Asia/Qyzylorda')
     expect(l.pad.lat).toBeCloseTo(45.996, 2)
     // WHY: two streams exist (YouTube priority 10, NASA+ priority 12); the highest priority wins.
@@ -149,6 +152,41 @@ describe('countdownText', () => {
     expect(countdownText(l('2026-09-07T11:59:00Z', 'SEC'), now)).toBe('T+00d 00h 01m 00s')
     expect(countdownText(l('2026-09-30T00:00:00Z', 'M'), now)).toBe('NET Sep 2026')
     expect(countdownText(l('2026-09-08T00:00:00Z', 'SEC', 'Hold'), now)).toBe('HOLD')
+  })
+})
+
+describe('timeline, updates, stats', () => {
+  test('parses ISO-8601 offsets', () => {
+    expect(parseIsoDuration('-PT38M')).toBe(-2280)
+    expect(parseIsoDuration('P0D')).toBe(0)
+    expect(parseIsoDuration('PT2M26S')).toBe(146)
+    expect(parseIsoDuration('PT1H2M3S')).toBe(3723)
+    expect(parseIsoDuration('garbage')).toBeNaN()
+  })
+  test('formats offsets like a webcast clock', () => {
+    expect(formatOffset(-2280)).toBe('T-38:00')
+    expect(formatOffset(0)).toBe('T+00:00')
+    expect(formatOffset(146)).toBe('T+02:26')
+    expect(formatOffset(3723)).toBe('T+1:02:03')
+  })
+  test('maps a published timeline sorted by offset, and leaves it empty otherwise', () => {
+    const f9 = byName('USSF-153')
+    expect(f9.timeline.length).toBeGreaterThan(10)
+    expect(f9.timeline[0]).toEqual({ abbrev: 'GO for Prop Load', description: 'Launch director verifies go for propellant load', offsetSec: -2280 })
+    expect(f9.timeline.find((e) => e.abbrev === 'Liftoff')?.offsetSec).toBe(0)
+    for (let i = 1; i < f9.timeline.length; i++) expect(f9.timeline[i]!.offsetSec).toBeGreaterThanOrEqual(f9.timeline[i - 1]!.offsetSec)
+    expect(byName('Progress MS-35').timeline).toEqual([])
+  })
+  test('keeps the newest 8 updates, newest first', () => {
+    const vega = byName('Sentinel-3C')
+    expect(vega.updates.length).toBeLessThanOrEqual(8)
+    for (let i = 1; i < vega.updates.length; i++) expect(Date.parse(vega.updates[i]!.at)).toBeLessThanOrEqual(Date.parse(vega.updates[i - 1]!.at))
+    expect(vega.updates[0]!.by).toBeTruthy()
+  })
+  test('carries programme names and attempt counters', () => {
+    const l = byName('Progress MS-35')
+    expect(typeof l.attempt.orbitalYear).toBe('number')
+    expect(Array.isArray(l.program)).toBe(true)
   })
 })
 

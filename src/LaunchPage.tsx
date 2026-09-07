@@ -2,13 +2,15 @@ import { lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { orbitProfile } from './geo'
+import { cn } from '@/lib/utils'
 import { GlobeFallback } from './Home'
-import { launchIcs } from './ics'
+import { googleCalendarUrl, launchIcs } from './ics'
 import { countdownMode, countdownText, formatNet, padsOf, siteName, youtubeEmbedUrl } from './launches'
+import { LaunchTimeline } from './LaunchTimeline'
+import { Panel } from './Panel'
 import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
-import { LOCAL, padLocal, UTC, UTC_TIME } from './time'
+import { LOCAL, LOG_TIME, padLocal, UTC, UTC_TIME } from './time'
 import type { LaunchFeed } from './useLaunches'
 
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
@@ -18,42 +20,46 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
   const launch = feed?.launches.find((l) => l.id === id) ?? null
   // Hooks run unconditionally; the early returns come after.
   const pads = useMemo(() => (launch ? padsOf([launch]) : []), [launch])
-  const trajectory = useMemo(
-    () => (launch && launch.pad.lat !== null && launch.pad.lon !== null ? { lat: launch.pad.lat, lon: launch.pad.lon, orbitAbbrev: launch.mission.orbitAbbrev } : null),
-    [launch],
+  // WHY: stamped with fetchedAt, not `now`, so the calendar URLs are stable and not rebuilt every second.
+  const calendar = useMemo(
+    () =>
+      launch && feed
+        ? { google: googleCalendarUrl(launch, feed.fetchedAt), ics: `data:text/calendar;charset=utf-8,${encodeURIComponent(launchIcs(launch, feed.fetchedAt))}` }
+        : null,
+    [launch, feed],
   )
-  // WHY: stamped with fetchedAt, not `now`, so the data: URL is stable and not rebuilt every second.
-  const icsHref = useMemo(() => (launch && feed ? `data:text/calendar;charset=utf-8,${encodeURIComponent(launchIcs(launch, feed.fetchedAt))}` : ''), [launch, feed])
 
   if (!feed) return <p className="text-muted-foreground">Loading launch…</p>
-  if (!launch) return <NotFound />
+  if (!launch || !calendar) return <NotFound />
 
   const mode = countdownMode(launch, now)
   const net = new Date(launch.net)
   const timed = mode !== 'net-date'
+  const live = mode === 'tick' || mode === 'tplus'
   const embed = youtubeEmbedUrl(launch.webcast)
   const hasWindow = launch.windowStart && launch.windowEnd && launch.windowStart !== launch.windowEnd
-  const inclination = launch.pad.lat !== null ? orbitProfile(launch.mission.orbitAbbrev, launch.pad.lat).inclinationDeg : null
+  const year = net.getUTCFullYear()
 
   return (
-    <article className="space-y-8">
+    <article className="space-y-4">
       <title>{`${launch.rocket} · ${launch.mission.name} · Space Launches`}</title>
       <Link to="/" className="inline-block text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">
         ← All launches
       </Link>
 
       <header className="relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden border border-border">
-        <Photo image={launch.image} alt="" eager width={1600} height={900} className="absolute inset-0 -z-20 h-full w-full object-cover opacity-60 grayscale" />
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-background via-background/75 to-background/5" />
+        <Photo image={launch.image} alt="" eager width={1600} height={900} className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-background via-background/80 to-background/10" />
         <div className="space-y-3 p-6 sm:p-8">
           <p className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground">
             {launch.providerAbbrev || launch.provider} · {launch.mission.type}
+            {launch.program.length > 0 ? ` · ${launch.program.join(', ')}` : ''}
             <StatusBadge status={launch.status} />
           </p>
           <h1 className="text-2xl text-pretty sm:text-3xl" translate="no">
             {launch.rocket} <span className="text-muted-foreground">·</span> {launch.mission.name}
           </h1>
-          <p className="text-4xl sm:text-6xl">
+          <p className="whitespace-nowrap text-4xl sm:text-5xl md:text-6xl">
             {countdownText(launch, now)}
             <span className="cursor" aria-hidden="true">
               ▌
@@ -68,26 +74,40 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           )}
         </div>
         {launch.image?.credit ? (
-          <p className="absolute right-3 top-3 text-[10px] uppercase tracking-widest text-muted-foreground">photo · {launch.image.credit}</p>
+          <p className="absolute top-3 right-3 text-[10px] uppercase tracking-widest text-muted-foreground">photo · {launch.image.credit}</p>
         ) : null}
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_minmax(320px,420px)]">
-        <div className="space-y-6">
+      <Panel
+        label="Launch sequence"
+        live={live}
+        actions={<span>{launch.timeline.length > 0 ? `published by ${launch.providerAbbrev || launch.provider}` : 'typical sequence · not published for this launch'}</span>}
+      >
+        <LaunchTimeline launch={launch} now={now} />
+      </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,2fr)]">
+        <Panel label="Mission" bodyClassName="space-y-5 p-4">
           <div className="flex flex-wrap gap-3">
             {launch.webcast ? (
-              <a href={launch.webcast} target="_blank" rel="noreferrer" className={buttonVariants()}>
+              <a href={launch.webcast} target="_blank" rel="noreferrer" className={cn(buttonVariants(), 'bg-live text-background hover:bg-live/90')}>
                 Watch live ↗
               </a>
             ) : null}
-            {/* WHY: "notify me" on a static site is a calendar event with an alarm. It reaches every device the
-                visitor owns, needs no server, no push permission, and survives the tab being closed. */}
-            <a href={icsHref} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'outline' })}>
-              Add to calendar
+            {/* WHY: "notify me" on a static site is a calendar event. Google's template link opens a prefilled event and
+                Google applies the visitor's own reminders; the .ics is the same event for any other calendar, with a
+                15-minute alarm baked in. No server, no push permission, works on every device. */}
+            <a href={calendar.google} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+              Add to Google Calendar ↗
             </a>
-            <a href={launch.pad.mapUrl} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
-              Pad on the map ↗
+            <a href={calendar.ics} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'ghost' })}>
+              .ics
             </a>
+            {launch.flightClub ? (
+              <a href={launch.flightClub} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+                Trajectory on Flight Club ↗
+              </a>
+            ) : null}
           </div>
           <p className="text-pretty break-words">{launch.mission.description || 'No mission description published yet.'}</p>
           {embed ? (
@@ -103,21 +123,13 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           ) : null}
           <Separator />
           <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
-            <Fact label="Rocket">{launch.rocket}</Fact>
-            <Fact label="Provider">{launch.provider}</Fact>
             <Fact label="Type">{launch.mission.type}</Fact>
             <Fact label="Orbit">
               {launch.mission.orbit}
               {launch.mission.orbitAbbrev && launch.mission.orbitAbbrev !== 'N/A' ? ` (${launch.mission.orbitAbbrev})` : ''}
             </Fact>
-            <Fact label="Pad">
-              {launch.pad.name}, {siteName(launch)}, {launch.pad.country}
-            </Fact>
-            {timed && hasWindow ? (
-              <Fact label="Window">
-                {UTC_TIME.format(new Date(launch.windowStart!))}–{UTC_TIME.format(new Date(launch.windowEnd!))} UTC
-              </Fact>
-            ) : null}
+            {launch.program.length > 0 ? <Fact label="Programme">{launch.program.join(', ')}</Fact> : null}
+            <Fact label="Provider">{launch.provider}</Fact>
             <Fact label="Status">
               {launch.status.name}. <span className="text-muted-foreground">{launch.status.description}</span>
             </Fact>
@@ -128,28 +140,82 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
               </Fact>
             ) : null}
           </dl>
-        </div>
-
-        <aside className="space-y-3">
-          <div className="aspect-square border border-border">
-            <Suspense fallback={<GlobeFallback />}>
-              <Globe pads={pads} focusId={launch.id} trajectory={trajectory} className="h-full w-full" />
-            </Suspense>
-          </div>
-          <p className="text-xs text-pretty text-muted-foreground">
-            {trajectory
-              ? `Illustrative ascent from ${siteName(launch)} into ${launch.mission.orbit}${inclination !== null ? ` at about ${Math.round(inclination)}° inclination` : ''}. Drawn from the pad's latitude and the orbit type, not flight data. Drag to rotate.`
-              : 'Pad coordinates not published for this launch.'}
-          </p>
           {launch.patch ? (
-            <figure className="space-y-2 pt-4">
-              <img src={launch.patch} alt={`${launch.mission.name} mission patch`} width={200} height={200} loading="lazy" className="mx-auto h-44 w-44 object-contain" />
-              <figcaption className="text-center text-[10px] uppercase tracking-widest text-muted-foreground">mission patch</figcaption>
+            <figure className="flex items-center gap-4 pt-2">
+              <img src={launch.patch} alt={`${launch.mission.name} mission patch`} width={160} height={160} loading="lazy" className="h-28 w-28 object-contain" />
+              <figcaption className="text-[10px] uppercase tracking-widest text-muted-foreground">mission patch</figcaption>
             </figure>
           ) : null}
-        </aside>
+        </Panel>
+
+        <Panel label="Mission log" actions={<span>{launch.updates.length} updates</span>}>
+          {launch.updates.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No updates logged yet.</p>
+          ) : (
+            <ol className="divide-y divide-border text-xs">
+              {launch.updates.map((u) => (
+                <li key={`${u.at}-${u.by}`} className="grid grid-cols-[max-content_1fr] gap-x-3 px-3 py-2.5">
+                  <time dateTime={u.at} className="whitespace-nowrap text-muted-foreground">
+                    {LOG_TIME.format(new Date(u.at))}
+                  </time>
+                  <p className="text-pretty break-words">
+                    {u.comment} <span className="text-muted-foreground">· {u.by}</span>
+                    {u.url ? (
+                      <>
+                        {' '}
+                        <a href={u.url} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-live">
+                          source ↗
+                        </a>
+                      </>
+                    ) : null}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
+
+        <Panel label="Launch site" className="lg:col-span-2 2xl:col-span-1" bodyClassName="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-1">
+          <div className="aspect-square border border-border">
+            <Suspense fallback={<GlobeFallback />}>
+              <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
+            </Suspense>
+          </div>
+          <div className="space-y-4">
+            <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
+              <Fact label="Pad">{launch.pad.name}</Fact>
+              <Fact label="Site">{siteName(launch)}</Fact>
+              <Fact label="Country">{launch.pad.country}</Fact>
+              {timed ? <Fact label="Local">{padLocal(launch.pad.timezone).format(net)}</Fact> : null}
+              {timed && hasWindow ? (
+                <Fact label="Window">
+                  {UTC_TIME.format(new Date(launch.windowStart!))}–{UTC_TIME.format(new Date(launch.windowEnd!))} UTC
+                </Fact>
+              ) : null}
+              <Fact label="Map">
+                <a href={launch.pad.mapUrl} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-live">
+                  open ↗
+                </a>
+              </Fact>
+            </dl>
+            <div className="grid grid-cols-3 gap-px bg-border">
+              <Tile value={launch.attempt.orbitalYear} label={`orbital launch of ${year}`} />
+              <Tile value={launch.attempt.pad} label="launch from this pad" />
+              <Tile value={launch.attempt.agencyYear} label={`by ${launch.providerAbbrev || 'provider'} in ${year}`} />
+            </div>
+          </div>
+        </Panel>
       </div>
     </article>
+  )
+}
+
+function Tile({ value, label }: { value: number | null; label: string }) {
+  return (
+    <div className="bg-card p-3">
+      <p className="text-2xl">{value === null ? '—' : `#${value}`}</p>
+      <p className="text-[10px] leading-tight uppercase tracking-widest text-muted-foreground">{label}</p>
+    </div>
   )
 }
 

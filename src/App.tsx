@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router'
 import { Home } from './Home'
 import { LaunchPage, NotFound } from './LaunchPage'
-import { LOCAL } from './time'
+import { LOCAL, LOCAL_CLOCK, UTC_CLOCK } from './time'
 import { useLaunches } from './useLaunches'
 import { useNow } from './useNow'
 
@@ -14,27 +14,31 @@ export default function App() {
     // app lives under /space-launches/ or every route would be off by that prefix.
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ScrollToTop />
-      <main className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6">
+      <main className="min-h-screen w-full space-y-4 px-4 py-4 lg:px-6">
         <a
           href="#launches"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:bg-foreground focus:px-3 focus:py-2 focus:text-background"
         >
           Skip to launch list
         </a>
-        <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-3 text-xs uppercase tracking-widest text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">
+        <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border pb-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+          <Link to="/" className="text-foreground hover:text-live">
             Space Launches
           </Link>
-          <span className="flex gap-4">
-            <span>next 20 orbital launches</span>
+          {/* WHY: launch coverage runs on UTC; the visitor lives in local time. Both clocks, seconds included, like a control-room wall. */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <span>
+              <span className="text-foreground">{UTC_CLOCK.format(now)}</span> UTC
+            </span>
+            <span className="text-foreground">{LOCAL_CLOCK.format(now)}</span>
             <a
               href={`${import.meta.env.BASE_URL}launches.ics`}
-              title="Subscribe in your calendar app to get every launch with a 15-minute reminder; times update when they slip."
+              title="Subscribe in your calendar app: every launch with a 15-minute reminder; times update when they slip."
               className="underline underline-offset-4 hover:text-foreground"
             >
               calendar feed
             </a>
-          </span>
+          </div>
         </header>
         <Routes>
           <Route path="/" element={<Home feed={feed} error={error} now={now} />} />
@@ -64,9 +68,7 @@ const STALE_MS = 90 * 60_000
 function Footer({ fetchedAt, now }: { fetchedAt: string; now: number }) {
   const stale = now - Date.parse(fetchedAt) > STALE_MS
   return (
-    <footer
-      className={`border-t border-border pt-3 text-xs uppercase tracking-widest ${stale ? 'text-foreground' : 'text-muted-foreground'}`}
-    >
+    <footer className={`border-t border-border pt-3 text-[11px] uppercase tracking-widest ${stale ? 'text-caution' : 'text-muted-foreground'}`}>
       data as of <time dateTime={fetchedAt}>{LOCAL.format(new Date(fetchedAt))}</time>
       {stale ? ' · stale: refresh job may have stalled' : ''} · source: launch library 2 · photos © their credited owners
     </footer>

@@ -18,16 +18,39 @@ function fold(line: string): string {
   return out.join('\r\n')
 }
 
-export function launchEvent(launch: Launch, stampIso: string): string[] {
-  const timed = countdownMode(launch, Date.parse(stampIso)) !== 'net-date'
-  const summary = `${launch.rocket} · ${launch.mission.name}${timed ? '' : ` (${formatNet(launch)})`}`
-  const description = [
+const isTimed = (launch: Launch, stampIso: string) => countdownMode(launch, Date.parse(stampIso)) !== 'net-date'
+const summaryOf = (launch: Launch, timed: boolean) => `${launch.rocket} · ${launch.mission.name}${timed ? '' : ` (${formatNet(launch)})`}`
+const descriptionOf = (launch: Launch) =>
+  [
     launch.mission.description,
     launch.webcast ? `Watch live: ${launch.webcast}` : '',
     `Status: ${launch.status.name}. Times can slip; check the site before you tune in.`,
   ]
     .filter(Boolean)
     .join('\n')
+const locationOf = (launch: Launch) => `${launch.pad.name}, ${launch.pad.location}`
+// WHY: an instantaneous window has no length; give the event an hour so it shows up as a block, not a line.
+const endOf = (launch: Launch) =>
+  launch.windowEnd && Date.parse(launch.windowEnd) > Date.parse(launch.net) ? launch.windowEnd : new Date(Date.parse(launch.net) + 3_600_000).toISOString()
+
+/** Google Calendar "new event" link with the launch prefilled. Google applies the user's own default reminders. */
+export function googleCalendarUrl(launch: Launch, stampIso: string): string {
+  const timed = isTimed(launch, stampIso)
+  const nextDay = new Date(Date.parse(launch.net) + 86_400_000).toISOString()
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: summaryOf(launch, timed),
+    dates: timed ? `${stamp(launch.net)}/${stamp(endOf(launch))}` : `${dateOnly(launch.net)}/${dateOnly(nextDay)}`,
+    details: descriptionOf(launch),
+    location: locationOf(launch),
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+export function launchEvent(launch: Launch, stampIso: string): string[] {
+  const timed = isTimed(launch, stampIso)
+  const summary = summaryOf(launch, timed)
+  const description = descriptionOf(launch)
   const lines = [
     'BEGIN:VEVENT',
     // WHY: a stable UID per launch lets a calendar app *update* the event when the time slips instead of duplicating it.
@@ -35,13 +58,12 @@ export function launchEvent(launch: Launch, stampIso: string): string[] {
     `DTSTAMP:${stamp(stampIso)}`,
     `SUMMARY:${esc(summary)}`,
     `DESCRIPTION:${esc(description)}`,
-    `LOCATION:${esc(`${launch.pad.name}, ${launch.pad.location}`)}`,
+    `LOCATION:${esc(locationOf(launch))}`,
     `GEO:${launch.pad.lat ?? 0};${launch.pad.lon ?? 0}`,
   ]
   if (launch.webcast) lines.push(`URL:${launch.webcast}`)
   if (timed) {
-    const end = launch.windowEnd && Date.parse(launch.windowEnd) > Date.parse(launch.net) ? launch.windowEnd : new Date(Date.parse(launch.net) + 3_600_000).toISOString()
-    lines.push(`DTSTART:${stamp(launch.net)}`, `DTEND:${stamp(end)}`)
+    lines.push(`DTSTART:${stamp(launch.net)}`, `DTEND:${stamp(endOf(launch))}`)
     // WHY: a 15-minute alarm is the "notification". Calendars deliver it on every device with no server or permission prompt.
     lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`Launch in 15 minutes: ${summary}`)}`, 'TRIGGER:-PT15M', 'END:VALARM')
   } else {
