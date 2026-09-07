@@ -27,11 +27,20 @@ export default function App() {
         <h1>space-launches</h1>
         <span>next {launches.length || 20} orbital launches</span>
       </header>
-      {selected ? (
-        <Hero launch={selected} now={now} />
-      ) : (
-        <p className="text-muted-foreground">{error ? `Could not load launches: ${error}` : 'Loading launches…'}</p>
-      )}
+      {/* WHY: hero and globe side by side from lg up, stacked below; the globe slot is filled in ticket 07. */}
+      <section className="grid gap-6 lg:grid-cols-[1fr_minmax(280px,360px)]">
+        {selected ? (
+          <Hero launch={selected} now={now} />
+        ) : (
+          <p className="text-muted-foreground">{error ? `Could not load launches: ${error}` : 'Loading launches…'}</p>
+        )}
+        <aside
+          aria-label="Launch sites globe"
+          className="flex aspect-square items-center justify-center border border-border text-xs uppercase tracking-widest text-muted-foreground"
+        >
+          globe · ticket 07
+        </aside>
+      </section>
       <LaunchTable launches={launches} now={now} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
       {feed ? <Footer fetchedAt={feed.fetchedAt} now={now} /> : null}
     </main>

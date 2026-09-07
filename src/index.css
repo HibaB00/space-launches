@@ -148,3 +148,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .cursor { animation: none; }
 }
+
+/* Scanlines: a static 2px texture over everything. Not guarded by prefers-reduced-motion because nothing moves;
+   that media query is about motion, not texture. Kept very faint so text contrast is unaffected. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, oklch(0 0 0 / 0.16) 2px 4px);
+}
+/* Selected table row: a hairline on the left instead of a filled background, so it reads as a cursor, not a highlight. */
+tr[data-state="selected"] > td:first-child {
+    box-shadow: inset 2px 0 0 var(--foreground);
+}
+::selection {
+    background: var(--foreground);
+    color: var(--background);
+}

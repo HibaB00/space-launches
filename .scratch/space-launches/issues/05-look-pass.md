@@ -1,6 +1,6 @@
 # 05 — Look pass
 
-Status: ready-for-agent
+Status: needs-info
 Blocked by: 03
 
 ## Delivers
@@ -22,3 +22,5 @@ Blocked by: 03
 - Aerospace: none. Pure craft ticket.
 
 ## Comments
+
+- 2026-09-07 — CSS applied, awaiting Hiba's review. Badge variants restyled to a grey weight scale (GO solid, TBC strong outline, TBD dim outline, HOLD solid + `motion-safe:animate-pulse`). Static scanline overlay; deliberately *not* behind `prefers-reduced-motion` because it doesn't move (that query is about motion, not texture); the cursor blink and HOLD pulse are guarded. Selected row marked with a 2px left hairline instead of a fill. Hero/globe grid stacks under `lg`. Geist Mono already self-hosted from ticket 01.
