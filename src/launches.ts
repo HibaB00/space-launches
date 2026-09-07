@@ -142,3 +142,16 @@ export function formatNet(launch: Launch): string {
   if (p === 'WK') return `NET week of ${day}`
   return `NET ${day}`
 }
+
+/** The one string a countdown cell shows, whatever the mode. */
+export function countdownText(launch: Launch, now: number): string {
+  switch (countdownMode(launch, now)) {
+    case 'tick':
+    case 'tplus':
+      return formatCountdown(Date.parse(launch.net) - now)
+    case 'net-date':
+      return formatNet(launch)
+    case 'hold':
+      return 'HOLD'
+  }
+}

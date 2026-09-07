@@ -1,6 +1,6 @@
 # 03 — Fetch script + live hero and table
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 ## Delivers
@@ -22,3 +22,5 @@ Blocked by: 02
 - Aerospace: **launch service provider (LSP)** vs the rocket's manufacturer; **pad vs launch site** (SLC-40 is a pad at Cape Canaveral SFS).
 
 ## Comments
+
+- 2026-09-07 — Done. `bun run fetch` → 23 KB JSON (raw response is ~600 KB). Hooks: `useNow` (one clock), `useLaunches` (mount fetch; the 10-min refresh comes in 04). Components: `Hero`, `LaunchTable` with a module-level `LaunchRow`, `StatusBadge`. `countdownText()` added to the pure module so hero and table share one string per mode. Skipped SWR (`client-swr-dedup`): one consumer, nothing to dedupe. Rows carry a real `<button>` for keyboard users because `<tr>` can't take focus.

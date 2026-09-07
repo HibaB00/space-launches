@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import {
+  countdownText,
   countdownMode,
   formatCountdown,
   formatNet,
@@ -120,5 +121,21 @@ describe('formatNet', () => {
   })
   test('falls back to the full date for unknown precision', () => {
     expect(formatNet(l('2026-10-07T00:00:00Z', ''))).toBe('NET 7 Oct 2026')
+  })
+})
+
+describe('countdownText', () => {
+  const now = Date.parse('2026-09-07T12:00:00Z')
+  const l = (net: string, netPrecision: string, status = 'Go'): Launch => ({
+    ...launches[0],
+    net,
+    netPrecision,
+    status: { ...launches[0].status, abbrev: status },
+  })
+  test('picks the representation for the mode', () => {
+    expect(countdownText(l('2026-09-07T13:01:05Z', 'MIN'), now)).toBe('T-00d 01h 01m 05s')
+    expect(countdownText(l('2026-09-07T11:59:00Z', 'SEC'), now)).toBe('T+00d 00h 01m 00s')
+    expect(countdownText(l('2026-09-30T00:00:00Z', 'M'), now)).toBe('NET Sep 2026')
+    expect(countdownText(l('2026-09-08T00:00:00Z', 'SEC', 'Hold'), now)).toBe('HOLD')
   })
 })
