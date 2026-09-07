@@ -20,7 +20,7 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 
 - **LSP (Launch Service Provider)**: the company or agency that flies the rocket (SpaceX, CASC, Arianespace, Rocket Lab, ISRO). May differ from the payload's owner.
 - **Mission type**: LL2 taxonomy: Communications, Earth Science, Navigation, Human Exploration, Resupply, Test Flight, Dedicated Rideshare, Government/Top Secret, Unknown…
-- **Orbit abbreviations**: **LEO** low Earth orbit (~160–2000 km; ISS, Starlink). **SSO** sun-synchronous orbit (polar-ish LEO that passes over any point at the same local solar time; Earth observation). **GTO** geostationary transfer orbit (elliptical, the payload raises itself to **GEO** at 35,786 km). **MEO** medium (GPS). **TLI** trans-lunar injection. **Sub-orbital**: doesn't complete an orbit.
+- **Orbit abbreviations**: **LEO** low Earth orbit (~160–2000 km; ISS, Starlink). **SSO** sun-synchronous orbit (polar-ish LEO that passes over any point at the same local solar time; Earth observation). **GTO** geostationary transfer orbit (elliptical, the payload raises itself to **GEO** at 35,786 km). **MEO** medium (GPS). **PO** polar orbit (inclination ~90°, covers the whole globe). **TLI** trans-lunar injection. **Mars**: LL2 uses the destination body as the "orbit" for interplanetary missions. **Sub** / sub-orbital: doesn't complete an orbit. **N/A**: unknown or undisclosed payload.
 
 ## Project / software terms
 

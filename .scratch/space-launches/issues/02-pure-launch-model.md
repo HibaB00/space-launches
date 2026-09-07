@@ -1,6 +1,6 @@
 # 02 — Pure launch model + countdown formatter, tested
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 ## Delivers
@@ -20,3 +20,5 @@ Blocked by: 01
 - Aerospace: **NET** (no earlier than) vs a firm T-0; **net_precision** (LL2 marks whether a time is known to the second, minute, hour, day, month or quarter); **T-minus / T-plus** conventions; **status vocabulary** Go / TBC (awaiting official confirmation) / TBD / Hold.
 
 ## Comments
+
+- 2026-09-07 — Done. Simplification: dropped the separate `tbd` mode; any day-or-coarser precision renders as `net-date` and the status badge already says TBD. HR precision still ticks (LL2 clients do the same); the UI should show the precision so an hour-level NET isn't read as exact. `WK`, `H1/H2`, `Y` precisions handled although the fixture only has SEC/MIN/HR/DAY/M/Q3.
