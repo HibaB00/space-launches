@@ -64,15 +64,19 @@ function LaunchRow({
       className="cursor-pointer"
     >
       <TableCell className="whitespace-nowrap">{countdownText(launch, now)}</TableCell>
-      <TableCell className="whitespace-nowrap">{launch.rocket}</TableCell>
+      <TableCell className="whitespace-nowrap" translate="no">
+        {launch.rocket}
+      </TableCell>
       <TableCell>
-        {/* WHY: a <tr> can't take keyboard focus; this button gives keyboard and screen-reader users the same action as the row click. */}
+        {/* WHY: a <tr> can't take keyboard focus; this button gives keyboard and screen-reader users the same
+            action. It has no onClick of its own: activating it (mouse or Enter) fires a click that bubbles to
+            the row's handler, so there is exactly one place that selects. */}
         <button
           type="button"
-          aria-pressed={selected}
           aria-expanded={selected}
-          onClick={() => onSelect(launch.id)}
-          className="text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+          aria-controls={`detail-${launch.id}`}
+          translate="no"
+          className="break-words text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring"
         >
           {launch.mission.name}
         </button>
@@ -90,10 +94,10 @@ function DetailRow({ launch, now }: { launch: Launch; now: number }) {
   const timed = countdownMode(launch, now) !== 'net-date'
   const hasWindow = launch.windowStart && launch.windowEnd && launch.windowStart !== launch.windowEnd
   return (
-    <TableRow className="hover:bg-transparent">
+    <TableRow id={`detail-${launch.id}`} className="hover:bg-transparent">
       <TableCell colSpan={5} className="whitespace-normal p-4 sm:p-6">
         <div className="max-w-3xl space-y-4 text-sm">
-          <p>{launch.mission.description || 'No mission description published yet.'}</p>
+          <p className="break-words text-pretty">{launch.mission.description || 'No mission description published yet.'}</p>
           <Separator />
           <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5">
             <Fact label="Type">{launch.mission.type}</Fact>

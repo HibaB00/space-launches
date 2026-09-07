@@ -167,3 +167,6 @@ tr[data-state="selected"] > td:first-child {
     background: var(--foreground);
     color: var(--background);
 }
+/* Touch: no 300 ms tap delay on controls, no grey tap flash; the row hairline is the feedback. */
+button, a, [role="button"] { touch-action: manipulation; }
+body { -webkit-tap-highlight-color: transparent; }

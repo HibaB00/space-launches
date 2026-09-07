@@ -23,6 +23,13 @@ export default function App() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+      {/* WHY: keyboard users can jump past the hero straight to the list; visible only when focused. */}
+      <a
+        href="#launches"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:bg-foreground focus:px-3 focus:py-2 focus:text-background"
+      >
+        Skip to launch list
+      </a>
       <header className="flex items-baseline justify-between border-b border-border pb-3 text-xs uppercase tracking-widest text-muted-foreground">
         <h1>space-launches</h1>
         <span>next {launches.length || 20} orbital launches</span>
@@ -32,7 +39,7 @@ export default function App() {
         {selected ? (
           <Hero launch={selected} now={now} />
         ) : (
-          <p className="text-muted-foreground">{error ? `Could not load launches: ${error}` : 'Loading launches…'}</p>
+          <p className="text-muted-foreground">{error ? `Could not load launches (${error}). Reload the page to retry.` : 'Loading launches…'}</p>
         )}
         <aside
           aria-label="Launch sites globe"
@@ -41,7 +48,9 @@ export default function App() {
           globe · ticket 07
         </aside>
       </section>
-      <LaunchTable launches={launches} now={now} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+      <div id="launches">
+        <LaunchTable launches={launches} now={now} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+      </div>
       {feed ? <Footer fetchedAt={feed.fetchedAt} now={now} /> : null}
     </main>
   )

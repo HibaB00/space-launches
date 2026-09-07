@@ -4,7 +4,7 @@ import { StatusBadge } from './StatusBadge'
 import { LOCAL, UTC } from './time'
 
 const PRECISION_NOTE: Record<string, string> = {
-  HR: '±1 h · T-0 known to the hour',
+  HR: '±1\u00a0h · T-0 known to the hour',
   MIN: 'T-0 known to the minute',
 }
 
@@ -29,7 +29,7 @@ export function Hero({ launch, now }: { launch: Launch; now: number }) {
             ▌
           </span>
         </p>
-        <p className="text-lg">
+        <p className="break-words text-lg" translate="no">
           {launch.rocket} <span className="text-muted-foreground">·</span> {launch.mission.name}
         </p>
         <p className="text-sm text-muted-foreground">
