@@ -1,25 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { countdownMode, countdownText, type Launch } from './launches'
 import { StatusBadge } from './StatusBadge'
-
-// WHY (js-cache-function-results): Intl formatters are expensive to construct; build them once per module,
-// not once per render. `undefined` locale = the visitor's own locale and time zone.
-const LOCAL = new Intl.DateTimeFormat(undefined, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZoneName: 'short',
-})
-const UTC = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-  timeZone: 'UTC',
-})
+import { LOCAL, UTC } from './time'
 
 const PRECISION_NOTE: Record<string, string> = {
   HR: '±1 h · T-0 known to the hour',

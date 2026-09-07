@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Hero } from './Hero'
 import { LaunchTable } from './LaunchTable'
 import type { Launch } from './launches'
+import { LOCAL } from './time'
 import { useLaunches } from './useLaunches'
 import { useNow } from './useNow'
 
@@ -32,6 +33,23 @@ export default function App() {
         <p className="text-muted-foreground">{error ? `Could not load launches: ${error}` : 'Loading launches…'}</p>
       )}
       <LaunchTable launches={launches} now={now} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+      {feed ? <Footer fetchedAt={feed.fetchedAt} now={now} /> : null}
     </main>
+  )
+}
+
+// WHY: the deploy cron runs every 30 min. Data older than 90 min means three runs were missed, which is the
+// only way this page can notice that the scheduled job stalled (GitHub pauses crons after 60 idle days).
+const STALE_MS = 90 * 60_000
+
+function Footer({ fetchedAt, now }: { fetchedAt: string; now: number }) {
+  const stale = now - Date.parse(fetchedAt) > STALE_MS
+  return (
+    <footer
+      className={`border-t border-border pt-3 text-xs uppercase tracking-widest ${stale ? 'text-foreground' : 'text-muted-foreground'}`}
+    >
+      data as of <time dateTime={fetchedAt}>{LOCAL.format(new Date(fetchedAt))}</time>
+      {stale ? ' · stale: refresh job may have stalled' : ''} · source: launch library 2
+    </footer>
   )
 }

@@ -1,6 +1,6 @@
 # 04 — Details and freshness
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 
 ## Delivers
@@ -21,3 +21,5 @@ The selected row renders a detail `<tr colSpan>` beneath it: mission description
 - Aerospace: **mission type** taxonomy (Communications, Earth Science, Human Exploration, Resupply, Test Flight…); **target orbit** LEO / SSO / GTO / TLI and what altitude and inclination roughly mean.
 
 ## Comments
+
+- 2026-09-07 — Done. Detail row as a second `<tr colSpan=5>` under the selected row with description, type, orbit, provider, pad (map link), local time at the pad (IANA zone from LL2, one cached formatter per zone), launch window when it isn't instantaneous, webcast host. Shared Intl formatters moved to `src/time.ts`. `useLaunches` re-fetches every 10 min with `cache: 'no-cache'`, keeps the old feed on failure. Footer shows data age and flags > 90 min as stale.
