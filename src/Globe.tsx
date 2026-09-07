@@ -20,6 +20,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import land from 'world-atlas/land-110m.json'
+import landDots from './land-dots.json'
 import { coastlineSegments, graticuleSegments, latLonToVec3, type Topology } from './geo'
 
 export type GlobePad = { id: string; lat: number; lon: number }
@@ -30,9 +31,17 @@ type Props = {
   className?: string
 }
 
-// Built once per page load: the coastlines and grid never change.
+// Built once per page load: the coastlines, grid and land dots never change.
 const COAST = coastlineSegments(land as unknown as Topology, 1.002)
 const GRID = graticuleSegments(15, 1.0, 3)
+// WHY: coastlines alone leave continental interiors blank, so an inland pad (Jiuquan, in the Gobi) looks like it
+// sits in the ocean. A precomputed dot grid on land (scripts/build-land-dots.ts) makes land read as land.
+const LAND = (() => {
+  const p = landDots.points
+  const out = new Float32Array(p.length / 2 * 3)
+  for (let i = 0, j = 0; i < p.length; i += 2, j += 3) out.set(latLonToVec3(p[i]!, p[i + 1]!, 1.001), j)
+  return out
+})()
 // WHY: FOV 30° and radius 1: at 4.4 the sphere subtends ~26°, so the whole globe fits with a small margin.
 const CAMERA_DISTANCE = 4.4
 // WHY: CSS can't pause WebGL; the component has to read the media query itself and skip its own motion.
@@ -88,8 +97,11 @@ export const Globe = memo(function Globe({ pads, focusId, className }: Props) {
     // WHY: a solid sphere just under the lines hides the far hemisphere. Without it the back-side coastlines
     // show through and the globe reads as a tangle instead of a planet.
     const occluder = new Mesh(new SphereGeometry(0.995, 48, 32), new MeshBasicMaterial({ color: 0x0d0d0d }))
-    const grid = lineSegments(GRID, 0x2b2b2b, 1)
-    const coast = lineSegments(COAST, 0xd4d4d4, 0.9)
+    const grid = lineSegments(GRID, 0x262626, 1)
+    const coast = lineSegments(COAST, 0x8a9096, 0.8)
+    const landGeometry = new BufferGeometry()
+    landGeometry.setAttribute('position', new Float32BufferAttribute(LAND, 3))
+    const landPoints = new Points(landGeometry, new PointsMaterial({ color: 0xd8dde2, size: 0.012, sizeAttenuation: true }))
 
     const padsGeometry = new BufferGeometry()
     padsGeometry.setAttribute('position', new Float32BufferAttribute(new Float32Array(0), 3))
@@ -99,7 +111,7 @@ export const Globe = memo(function Globe({ pads, focusId, className }: Props) {
     const ring = new Mesh(new RingGeometry(0.05, 0.058, 32), new MeshBasicMaterial({ color: 0xa8d8f0, side: DoubleSide, transparent: true, opacity: 0.9 }))
     marker.visible = ring.visible = false
 
-    scene.add(occluder, grid, coast, padPoints, marker, ring)
+    scene.add(occluder, grid, coast, landPoints, padPoints, marker, ring)
     const r: Rig = { renderer, camera, scene, controls, padsGeometry, marker, ring, targetPos: null }
     rig.current = r
 
@@ -133,7 +145,7 @@ export const Globe = memo(function Globe({ pads, focusId, className }: Props) {
       cancelAnimationFrame(raf)
       observer.disconnect()
       controls.dispose()
-      for (const o of [occluder, grid, coast, padPoints, marker, ring]) disposeObject(o)
+      for (const o of [occluder, grid, coast, landPoints, padPoints, marker, ring]) disposeObject(o)
       renderer.dispose()
       el.removeChild(renderer.domElement)
       rig.current = null

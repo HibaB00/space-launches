@@ -30,6 +30,21 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Insertion**: the moment the vehicle reaches orbital velocity; we draw it 30° downrange, roughly where real upper stages cut off.
 - **GTO → GEO**: the rocket leaves the satellite in an ellipse (perigee low, apogee at 35,786 km); the satellite's own engine circularises at apogee.
 
+## Launch sequence (as LL2 publishes it, SpaceX vocabulary)
+
+- **Prop load**: propellant loading (RP-1 kerosene and sub-cooled liquid oxygen on Falcon 9) starts about T-35 min; **Engine chill**: cold propellant flows through the engines so they don't shock on ignition (T-7 min); **Startup**: the flight computer takes over the final minute; **Tank press**: tanks pressurised to flight levels; **Ignition** at T-3 s; **Liftoff** at T-0.
+- **Max-Q**: maximum aerodynamic pressure on the vehicle (~T+1:10), when the air is still thick and the rocket already fast; engines throttle down around it.
+- **MECO**: main engine cut-off, the first stage stops burning (~T+2:30); **Stage separation** follows seconds later; **SES-1**: first second-engine start; **Fairing separation** once the air is thin enough not to matter; **Entry burn** and **Landing burn** bring a reusable first stage back; **SECO**: second-engine cut-off, orbital velocity reached (~T+8:30); **Deploy**: payload separation.
+- **Ordinal timeline**: events drawn with equal spacing regardless of the time between them, as SpaceX's webcast bar does; a linear axis would squash 8 minutes of flight against 38 minutes of countdown.
+
+## Vehicle
+
+- **Stage**: a self-contained section (tanks + engines) discarded when empty; **interstage** joins two stages; **strap-on booster**: an extra stage bolted to the side of the core (Falcon Heavy, Ariane 6 P120C); **core**: the central first stage.
+- **Fairing**: the nose shell protecting the payload; **capsule**: a crew or cargo spacecraft that replaces the fairing.
+- **Flight-proven**: a booster that has flown before; **serial** (B1081): identity of a specific core; **droneship / ASDS**: autonomous barge landing platform (OCISLY, JRTI, ASOG); **downrange**: distance from the pad to the landing point, a proxy for how much energy the mission needed.
+- **Payload to LEO / GTO**: mass the vehicle can deliver to those orbits; the two headline numbers of a rocket's class.
+- **Liftoff thrust** (kN) vs **liftoff mass** (t): thrust must exceed weight (mass × 9.81) or it doesn't leave the pad; Falcon 9: 7,607 kN vs 549 t × 9.81 ≈ 5,386 kN → thrust-to-weight ≈ 1.4.
+
 ## Project / software terms
 
 - **Route / basename**: a client-side URL pattern (`/launch/:id`); `basename` is the sub-path the app lives under on GitHub Pages.

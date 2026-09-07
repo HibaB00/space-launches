@@ -190,6 +190,40 @@ describe('timeline, updates, stats', () => {
   })
 })
 
+describe('vehicle', () => {
+  test('maps specs, record and the flying booster for Falcon 9', () => {
+    const v = byName('USSF-153').vehicle
+    expect(v.name).toBe('Falcon 9 Block 5')
+    expect(v.family).toBe('Falcon')
+    expect(v.manufacturer).toBe('SpaceX')
+    expect(v.lengthM).toBe(70)
+    expect(v.diameterM).toBe(3.65)
+    expect(v.massT).toBe(549)
+    expect(v.leoKg).toBe(22800)
+    expect(v.stages).toBe(2)
+    expect(v.reusable).toBe(true)
+    expect(v.record.total).toBeGreaterThan(600)
+    expect(v.record.failed).toBe(1)
+    expect(v.wiki).toBe('https://en.wikipedia.org/wiki/Falcon_9')
+    expect(v.boosters).toHaveLength(1)
+    expect(v.boosters[0]).toMatchObject({ type: 'Core', serial: 'B1081', flightNumber: 27, reused: true })
+    expect(v.boosters[0]!.landing).toMatchObject({ location: 'OCISLY', downrangeKm: 574 })
+    expect(v.spacecraft).toBeNull()
+  })
+  test('carries the capsule and crew count for a crewed flight', () => {
+    const v = byName('Crew-13').vehicle
+    expect(v.spacecraft).toMatchObject({ config: 'Crew Dragon 2', destination: 'International Space Station', crew: 4 })
+    expect(v.spacecraft!.name).toContain('Crew Dragon')
+  })
+  test('tolerates a vehicle with no published dimensions', () => {
+    const v = byName('Long March 2D/YZ-3').vehicle
+    expect(v.lengthM).toBeNull()
+    expect(v.diameterM).toBeNull()
+    expect(v.stages).toBeNull()
+    expect(v.boosters).toEqual([])
+  })
+})
+
 describe('siteName / youtubeEmbedUrl', () => {
   test('site name is the part before the first comma', () => {
     expect(siteName(byName('Progress MS-35'))).toBe('Baikonur Cosmodrome')

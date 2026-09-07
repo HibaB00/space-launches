@@ -11,7 +11,56 @@ export type LL2Launch = {
   window_end: string | null
   status: { abbrev: string; name: string; description: string }
   launch_service_provider: { name: string; abbrev: string | null } | null
-  rocket: { configuration: { name: string; full_name: string | null } }
+  rocket: {
+    configuration: {
+      name: string
+      full_name: string | null
+      variant?: string | null
+      description?: string | null
+      manufacturer?: { name: string; abbrev: string | null } | null
+      families?: { name: string }[] | null
+      image?: { image_url: string; credit: string | null; license: { name: string } | null } | null
+      info_url?: string | null
+      wiki_url?: string | null
+      reusable?: boolean | null
+      min_stage?: number | null
+      max_stage?: number | null
+      length?: number | null
+      diameter?: number | null
+      maiden_flight?: string | null
+      launch_cost?: number | null
+      launch_mass?: number | null
+      leo_capacity?: number | null
+      gto_capacity?: number | null
+      to_thrust?: number | null
+      total_launch_count?: number | null
+      consecutive_successful_launches?: number | null
+      successful_launches?: number | null
+      failed_launches?: number | null
+      attempted_landings?: number | null
+      successful_landings?: number | null
+    }
+    launcher_stage?:
+      | {
+          type: string | null
+          reused: boolean | null
+          launcher_flight_number: number | null
+          launcher: { serial_number: string | null } | null
+          landing: {
+            description: string | null
+            downrange_distance: number | null
+            landing_location: { name: string; abbrev: string | null } | null
+          } | null
+        }[]
+      | null
+    spacecraft_stage?:
+      | {
+          destination: string | null
+          spacecraft: { name: string; spacecraft_config?: { name: string } | null }
+          launch_crew?: unknown[] | null
+        }[]
+      | null
+  }
   mission: {
     name: string
     description: string | null
@@ -46,6 +95,33 @@ export type LL2Launch = {
 }
 
 export type TimelineEvent = { abbrev: string; description: string; offsetSec: number }
+
+/** The launch vehicle: what it is, how big, its record, and what flies today (boosters, capsule). */
+export type Vehicle = {
+  name: string
+  family: string
+  variant: string
+  description: string
+  manufacturer: string
+  wiki: string | null
+  info: string | null
+  image: { url: string; credit: string; license: string } | null
+  lengthM: number | null
+  diameterM: number | null
+  massT: number | null
+  thrustKN: number | null
+  leoKg: number | null
+  gtoKg: number | null
+  stages: number | null
+  reusable: boolean
+  maidenFlight: string | null
+  costUsd: number | null
+  record: { total: number; success: number; failed: number; streak: number; landingsAttempted: number; landingsSuccess: number }
+  /** Cores and strap-on boosters flying on this launch, with their own history and landing plan. */
+  boosters: { type: string; serial: string; flightNumber: number | null; reused: boolean; landing: { description: string; location: string; downrangeKm: number | null } | null }[]
+  /** Crewed or cargo capsule on top, when there is one instead of a fairing. */
+  spacecraft: { name: string; config: string; destination: string; crew: number } | null
+}
 export type LaunchUpdate = { comment: string; by: string; at: string; url: string | null }
 
 /** What the UI reads. Produced once by the fetch script, shipped as public/launches.json. */
@@ -84,6 +160,7 @@ export type Launch = {
   program: string[]
   flightClub: string | null
   attempt: { orbitalYear: number | null; pad: number | null; agencyYear: number | null }
+  vehicle: Vehicle
 }
 
 // WHY: official names are long for a card ("United States of America"); everything else already reads fine.
@@ -113,6 +190,56 @@ export function formatOffset(sec: number): string {
   const m = Math.floor((t % 3_600) / 60)
   const s = t % 60
   return `${sign}${h > 0 ? `${h}:` : ''}${pad2(m)}:${pad2(s)}`
+}
+
+function toVehicle(rocket: LL2Launch['rocket']): Vehicle {
+  const c = rocket.configuration
+  const sc = rocket.spacecraft_stage?.[0]
+  return {
+    name: c.full_name ?? c.name,
+    family: c.families?.[0]?.name ?? '',
+    variant: c.variant ?? '',
+    description: c.description ?? '',
+    manufacturer: c.manufacturer?.name ?? '',
+    wiki: c.wiki_url ?? null,
+    info: c.info_url ?? null,
+    image: c.image ? { url: c.image.image_url, credit: c.image.credit ?? '', license: c.image.license?.name ?? '' } : null,
+    // WHY: LL2 units: length/diameter m, launch_mass t, capacities kg, thrust kN, cost USD. Kept as-is, named by unit.
+    lengthM: c.length ?? null,
+    diameterM: c.diameter ?? null,
+    massT: c.launch_mass ?? null,
+    thrustKN: c.to_thrust ?? null,
+    leoKg: c.leo_capacity ?? null,
+    gtoKg: c.gto_capacity ?? null,
+    stages: c.max_stage ?? c.min_stage ?? null,
+    reusable: c.reusable ?? false,
+    maidenFlight: c.maiden_flight ?? null,
+    costUsd: c.launch_cost ?? null,
+    record: {
+      total: c.total_launch_count ?? 0,
+      success: c.successful_launches ?? 0,
+      failed: c.failed_launches ?? 0,
+      streak: c.consecutive_successful_launches ?? 0,
+      landingsAttempted: c.attempted_landings ?? 0,
+      landingsSuccess: c.successful_landings ?? 0,
+    },
+    boosters: (rocket.launcher_stage ?? []).map((s) => ({
+      type: s.type ?? 'Core',
+      serial: s.launcher?.serial_number ?? '',
+      flightNumber: s.launcher_flight_number ?? null,
+      reused: s.reused ?? false,
+      landing: s.landing
+        ? {
+            description: s.landing.description ?? '',
+            location: s.landing.landing_location?.abbrev ?? s.landing.landing_location?.name ?? '',
+            downrangeKm: s.landing.downrange_distance ?? null,
+          }
+        : null,
+    })),
+    spacecraft: sc
+      ? { name: sc.spacecraft.name, config: sc.spacecraft.spacecraft_config?.name ?? '', destination: sc.destination ?? '', crew: sc.launch_crew?.length ?? 0 }
+      : null,
+  }
 }
 
 export function toLaunch(raw: LL2Launch): Launch {
@@ -176,6 +303,7 @@ export function toLaunch(raw: LL2Launch): Launch {
       pad: raw.pad_launch_attempt_count ?? null,
       agencyYear: raw.agency_launch_attempt_count_year ?? null,
     },
+    vehicle: toVehicle(raw.rocket),
   }
 }
 

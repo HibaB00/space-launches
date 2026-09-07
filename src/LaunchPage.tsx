@@ -12,6 +12,7 @@ import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
 import { LOCAL, LOG_TIME, padLocal, UTC, UTC_TIME } from './time'
 import type { LaunchFeed } from './useLaunches'
+import { VehiclePanel } from './VehiclePanel'
 
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
@@ -206,6 +207,8 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           </div>
         </Panel>
       </div>
+
+      <VehiclePanel vehicle={launch.vehicle} />
     </article>
   )
 }
