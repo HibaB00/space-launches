@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
-import { toLaunch, type LL2Launch } from './launches'
-import { HUMAN_M, REFERENCE, schematicLayout } from './vehicle'
+import { toLaunch, type LL2Launch, type Vehicle } from './launches'
+import { HUMAN_M, inferBoosters, knownEngines, REFERENCE, schematicLayout } from './vehicle'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
 const vehicle = (s: string) => launches.find((l) => l.name.includes(s))!.vehicle
@@ -49,5 +49,43 @@ describe('schematicLayout', () => {
     expect(l.boosters).toHaveLength(2)
     expect(l.boosters[0]!.x + l.boosters[0]!.w).toBeLessThanOrEqual(l.body.x)
     expect(l.boosters[1]!.x).toBeGreaterThanOrEqual(l.body.x + l.body.w)
+  })
+})
+
+describe('inferBoosters / knownEngines', () => {
+  const v = (name: string, boosters: Vehicle['boosters'] = []) => ({ name, boosters })
+  test('reads the configuration name when LL2 has no strap-ons', () => {
+    expect(inferBoosters(v('H3-24'))).toMatchObject({ count: 4, kind: 'solid', name: 'SRB-3 solid booster', source: 'name' })
+    expect(inferBoosters(v('H3-30'))).toMatchObject({ count: 0, source: 'none' })
+    expect(inferBoosters(v('Ariane 64 Block 2'))).toMatchObject({ count: 4, kind: 'solid' })
+    expect(inferBoosters(v('Vulcan VC6L'))).toMatchObject({ count: 6, kind: 'solid' })
+    expect(inferBoosters(v('Atlas V 551'))).toMatchObject({ count: 5 })
+    expect(inferBoosters(v('Soyuz 2.1b'))).toMatchObject({ count: 4, kind: 'liquid' })
+    expect(inferBoosters(v('Falcon Heavy'))).toMatchObject({ count: 2, kind: 'core' })
+    expect(inferBoosters(v('Falcon 9 Block 5'))).toMatchObject({ count: 0 })
+    expect(inferBoosters(v('Long March 8A'))).toMatchObject({ count: 0 })
+    expect(inferBoosters(v('Long March 5B'))).toMatchObject({ count: 4 })
+    expect(inferBoosters(v('Unknown Rocket'))).toMatchObject({ count: 0, source: 'none' })
+  })
+  test('the launch record wins over the name', () => {
+    const rec = inferBoosters(v('H3-24', [{ type: 'Core', serial: 'x', flightNumber: 1, reused: false, landing: null }, { type: 'Strap-On Booster', serial: 'a', flightNumber: 1, reused: false, landing: null }, { type: 'Strap-On Booster', serial: 'b', flightNumber: 1, reused: false, landing: null }]))
+    expect(rec).toMatchObject({ count: 2, source: 'll2' })
+  })
+  test('engines are reference knowledge by family', () => {
+    expect(knownEngines('H3-24')).toBe('2 × LE-9')
+    expect(knownEngines('Falcon 9 Block 5')).toBe('9 × Merlin 1D')
+    expect(knownEngines('Long March 12A')).toBeNull()
+  })
+  test('schematic draws inferred strap-ons and family styles', () => {
+    const h3 = schematicLayout(vehicle('MMX'))!
+    expect(h3.boosters).toHaveLength(4)
+    expect(h3.boosters.every((b) => b.kind === 'solid')).toBe(true)
+    const soyuz = schematicLayout(vehicle('Progress MS-35'))!
+    expect(soyuz.style).toBe('soyuz')
+    expect(soyuz.boosters).toHaveLength(4)
+    const starship = schematicLayout(vehicle('Flight 14'))!
+    expect(starship.style).toBe('starship')
+    expect(starship.segments.map((s) => s.kind)).toEqual(['stage', 'ship'])
+    expect(schematicLayout(vehicle('USSF-153'))!.style).toBe('falcon')
   })
 })

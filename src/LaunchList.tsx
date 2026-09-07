@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { googleSubscribeUrl } from './ics'
 import { countdownText, siteName, type Launch } from './launches'
 import { Panel } from './Panel'
 import { Photo } from './Photo'
@@ -10,8 +11,8 @@ export function LaunchList({ launches, now }: { launches: Launch[]; now: number 
       <Panel
         label={`Schedule · next ${launches.length}`}
         actions={
-          <a href={`${import.meta.env.BASE_URL}launches.ics`} className="underline underline-offset-4 hover:text-foreground">
-            calendar feed
+          <a href={googleSubscribeUrl()} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-foreground">
+            subscribe in Google Calendar ↗
           </a>
         }
       >

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Vehicle } from './launches'
 import { Panel } from './Panel'
+import { inferBoosters, knownEngines } from './vehicle'
 import { VehicleSchematic } from './VehicleSchematic'
 
 const NUM = new Intl.NumberFormat('en-US')
@@ -9,6 +10,8 @@ const money = (usd: number | null) => (usd === null ? null : usd >= 1e9 ? `$${(u
 
 export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
   const rate = v.record.total > 0 ? Math.round((v.record.success / v.record.total) * 100) : null
+  const inferred = inferBoosters(v)
+  const engines = knownEngines(v.name)
   const specs: [string, string | null][] = [
     ['Height', fmt(v.lengthM, 'm')],
     ['Diameter', fmt(v.diameterM, 'm')],
@@ -17,6 +20,7 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
     ['To LEO', fmt(v.leoKg, 'kg')],
     ['To GTO', fmt(v.gtoKg, 'kg')],
     ['Stages', v.stages === null ? null : String(v.stages)],
+    ['Stage 1 engines', engines ? `${engines} · reference` : null],
     ['Reusable', v.reusable ? 'yes' : 'no'],
     ['First flight', v.maidenFlight],
     ['Launch cost', money(v.costUsd)],
@@ -87,6 +91,12 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
                 </span>
               </li>
             ))}
+            {inferred.source === 'name' ? (
+              <li className="py-2">
+                {inferred.count} × {inferred.name}
+                <span className="text-muted-foreground"> · {inferred.note}</span>
+              </li>
+            ) : null}
             {v.spacecraft ? (
               <li className="py-2">
                 <span translate="no">{v.spacecraft.name}</span>
@@ -101,7 +111,9 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
                 Payload fairing <span className="text-muted-foreground">· shields the payload through the atmosphere, jettisoned once the air is thin</span>
               </li>
             )}
-            {v.boosters.length === 0 ? <li className="py-2 text-muted-foreground">Stage details not published for this flight.</li> : null}
+            {v.boosters.length === 0 && inferred.source === 'none' ? (
+              <li className="py-2 text-muted-foreground">Per-flight stage details not published for this launch.</li>
+            ) : null}
           </ul>
         </section>
         {v.description ? (

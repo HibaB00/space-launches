@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router'
 import { Home } from './Home'
+import { googleSubscribeUrl } from './ics'
 import { LaunchPage, NotFound } from './LaunchPage'
 import { LOCAL, LOCAL_CLOCK, UTC_CLOCK } from './time'
 import { useLaunches } from './useLaunches'
@@ -31,12 +32,13 @@ export default function App() {
               <span className="text-foreground">{UTC_CLOCK.format(now)}</span> UTC
             </span>
             <span className="text-foreground">{LOCAL_CLOCK.format(now)}</span>
-            <a
-              href={`${import.meta.env.BASE_URL}launches.ics`}
-              title="Subscribe in your calendar app: every launch with a 15-minute reminder; times update when they slip."
-              className="underline underline-offset-4 hover:text-foreground"
-            >
-              calendar feed
+            {/* WHY: a bare .ics link downloads a file; Google's "add calendar from URL" dialog subscribes instead, so
+                slipped times update on their own. It needs the deployed site: Google can't fetch localhost. */}
+            <a href={googleSubscribeUrl()} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-foreground" title="Every upcoming launch in Google Calendar; times update when they slip. Works once the site is deployed.">
+              Google Calendar ↗
+            </a>
+            <a href={`${import.meta.env.BASE_URL}launches.ics`} className="hover:text-foreground" title="Calendar feed (.ics) for Apple Calendar, Outlook and others">
+              .ics
             </a>
           </div>
         </header>

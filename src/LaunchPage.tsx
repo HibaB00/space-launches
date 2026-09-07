@@ -73,6 +73,27 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           ) : (
             <p className="text-sm text-muted-foreground">{formatNet(launch)} · date not yet firm</p>
           )}
+          <div className="flex flex-wrap gap-3 pt-2">
+            {launch.webcast ? (
+              <a href={launch.webcast} target="_blank" rel="noreferrer" className={cn(buttonVariants(), 'bg-live text-background hover:bg-live/90')}>
+                Watch live ↗
+              </a>
+            ) : null}
+            {/* WHY: "notify me" on a static site is a calendar event. Google's template link opens a prefilled event and
+                Google applies the visitor's own reminders; the .ics is the same event for any other calendar, with a
+                15-minute alarm baked in. No server, no push permission, works on every device. */}
+            <a href={calendar.google} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+              Add to Google Calendar ↗
+            </a>
+            <a href={calendar.ics} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'ghost' })} title="Download the event for Apple Calendar, Outlook or any other calendar (15-minute alarm included)">
+              Apple / Outlook (.ics)
+            </a>
+            {launch.flightClub ? (
+              <a href={launch.flightClub} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+                Trajectory on Flight Club ↗
+              </a>
+            ) : null}
+          </div>
         </div>
         {launch.image?.credit ? (
           <p className="absolute top-3 right-3 text-[10px] uppercase tracking-widest text-muted-foreground">photo · {launch.image.credit}</p>
@@ -87,29 +108,11 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
         <LaunchTimeline launch={launch} now={now} />
       </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,2fr)]">
+      {/* WHY: Mission and Mission log stack at their natural heights in one column; the site panel takes the other.
+          Three equal-height columns left the two text panels two-thirds empty next to the tall globe. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-4">
         <Panel label="Mission" bodyClassName="space-y-5 p-4">
-          <div className="flex flex-wrap gap-3">
-            {launch.webcast ? (
-              <a href={launch.webcast} target="_blank" rel="noreferrer" className={cn(buttonVariants(), 'bg-live text-background hover:bg-live/90')}>
-                Watch live ↗
-              </a>
-            ) : null}
-            {/* WHY: "notify me" on a static site is a calendar event. Google's template link opens a prefilled event and
-                Google applies the visitor's own reminders; the .ics is the same event for any other calendar, with a
-                15-minute alarm baked in. No server, no push permission, works on every device. */}
-            <a href={calendar.google} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
-              Add to Google Calendar ↗
-            </a>
-            <a href={calendar.ics} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'ghost' })}>
-              .ics
-            </a>
-            {launch.flightClub ? (
-              <a href={launch.flightClub} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
-                Trajectory on Flight Club ↗
-              </a>
-            ) : null}
-          </div>
           <p className="text-pretty break-words">{launch.mission.description || 'No mission description published yet.'}</p>
           {embed ? (
             <iframe
@@ -176,8 +179,9 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           )}
         </Panel>
 
-        <Panel label="Launch site" className="lg:col-span-2 2xl:col-span-1" bodyClassName="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-1">
-          <div className="aspect-square border border-border">
+        </div>
+        <Panel label="Launch site" bodyClassName="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="aspect-[4/3] border border-border">
             <Suspense fallback={<GlobeFallback />}>
               <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
             </Suspense>
