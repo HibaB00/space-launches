@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { GlobeFallback } from './Home'
 import { googleCalendarUrl, launchIcs } from './ics'
 import { countdownMode, countdownText, formatNet, padsOf, siteName, youtubeEmbedUrl } from './launches'
-import { LaunchTimeline } from './LaunchTimeline'
+import { LaunchSequence } from './LaunchSequence'
 import { Panel } from './Panel'
 import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
@@ -36,7 +36,6 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
   const mode = countdownMode(launch, now)
   const net = new Date(launch.net)
   const timed = mode !== 'net-date'
-  const live = mode === 'tick' || mode === 'tplus'
   const embed = youtubeEmbedUrl(launch.webcast)
   const hasWindow = launch.windowStart && launch.windowEnd && launch.windowStart !== launch.windowEnd
   const year = net.getUTCFullYear()
@@ -100,13 +99,7 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
         ) : null}
       </header>
 
-      <Panel
-        label="Launch sequence"
-        live={live}
-        actions={<span>{launch.timeline.length > 0 ? `published by ${launch.providerAbbrev || launch.provider}` : 'typical sequence · not published for this launch'}</span>}
-      >
-        <LaunchTimeline launch={launch} now={now} />
-      </Panel>
+      <LaunchSequence launch={launch} now={now} />
 
       {/* WHY: Mission and Mission log stack at their natural heights in one column; the site panel takes the other.
           Three equal-height columns left the two text panels two-thirds empty next to the tall globe. */}

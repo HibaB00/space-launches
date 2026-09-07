@@ -35,6 +35,8 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Prop load**: propellant loading (RP-1 kerosene and sub-cooled liquid oxygen on Falcon 9) starts about T-35 min; **Engine chill**: cold propellant flows through the engines so they don't shock on ignition (T-7 min); **Startup**: the flight computer takes over the final minute; **Tank press**: tanks pressurised to flight levels; **Ignition** at T-3 s; **Liftoff** at T-0.
 - **Max-Q**: maximum aerodynamic pressure on the vehicle (~T+1:10), when the air is still thick and the rocket already fast; engines throttle down around it.
 - **MECO**: main engine cut-off, the first stage stops burning (~T+2:30); **Stage separation** follows seconds later; **SES-1**: first second-engine start; **Fairing separation** once the air is thin enough not to matter; **Entry burn** and **Landing burn** bring a reusable first stage back; **SECO**: second-engine cut-off, orbital velocity reached (~T+8:30); **Deploy**: payload separation.
+- **Strongback / umbilical tower**: the pad structure that holds, fuels and powers the rocket until T-0 and swings away at liftoff.
+- **Engine restart**: upper stages often burn twice (SES-1 → SECO-1, coast, SES-2 → SECO-2) to raise an orbit or leave Earth; H3's MMX flight coasts for an hour between burns.
 - **Ordinal timeline**: events drawn with equal spacing regardless of the time between them, as SpaceX's webcast bar does; a linear axis would squash 8 minutes of flight against 38 minutes of countdown.
 
 ## Vehicle

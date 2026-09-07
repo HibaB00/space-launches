@@ -57,6 +57,9 @@ _Added 2026-09-07 evening after Hiba's review of the first build: "no images, it
 39. As a visitor, I want a Vehicle panel with the rocket's specs, record, what is flying today (booster serial, flight number, landing plan, capsule and crew) and a to-scale schematic next to a person and a Falcon 9, so that I understand what the rocket is and how it is composed.
 40. As a visitor, I want inland launch sites to visibly sit on land on the globe, so that the map is not misleading.
 
+41. As a visitor, I want to watch an animation of the launch sequence in which the rocket changes at each event (boosters away, fairing open, staging, deploy), so that I understand what happens and when, even for launches without a firm date.
+42. As a visitor, I want that animation to follow the real clock during the launch, so that it becomes a live status display.
+
 _Added 2026-09-07, later: "more of a control centre, full width, a bit of colour", "it should not be a globe, check how SpaceX does the steps", "add to calendar should open Google Calendar", "design of the rocket itself and how it is composed", "why does it look like it is in the middle of the ocean"._
 
 ## Implementation Decisions

@@ -1,17 +1,9 @@
 import type { Vehicle } from './launches'
-import { schematicLayout, type Segment } from './vehicle'
+import { noseD, schematicLayout } from './vehicle'
 
 const FG = 'var(--foreground)'
 const DIM = 'var(--muted-foreground)'
 const FILL = 'var(--card)'
-
-/** Nose shapes: an ogive fairing, a capsule (wide base, domed top), or a plain cone for single-stage vehicles. */
-function noseD(x: number, y: number, w: number, h: number, kind: Segment['kind']): string {
-  if (kind === 'ship') return `M${x},${y + h} L${x},${y + h * 0.3} Q${x},${y} ${x + w / 2},${y} Q${x + w},${y} ${x + w},${y + h * 0.3} L${x + w},${y + h} Z`
-  if (kind === 'capsule') return `M${x},${y + h} L${x + w * 0.15},${y + h * 0.35} Q${x + w / 2},${y - h * 0.05} ${x + w * 0.85},${y + h * 0.35} L${x + w},${y + h} Z`
-  if (kind === 'nose') return `M${x},${y + h} L${x + w / 2},${y} L${x + w},${y + h} Z`
-  return `M${x},${y + h} L${x},${y + h * 0.45} Q${x},${y} ${x + w / 2},${y} Q${x + w},${y} ${x + w},${y + h * 0.45} L${x + w},${y + h} Z`
-}
 
 /**
  * The vehicle to scale, next to a 1.8 m human and a dashed Falcon 9 (70 m) line for size.
@@ -20,7 +12,7 @@ function noseD(x: number, y: number, w: number, h: number, kind: Segment['kind']
 export function VehicleSchematic({ vehicle }: { vehicle: Vehicle }) {
   const l = schematicLayout(vehicle)
   if (!l) return null
-  const { body, ground, segments, boosters, human, reference, width, height, style } = l
+  const { body, ground, segments, boosters, human, width, height, style } = l
   // WHY: label rows are pushed apart so short upper stages (a 4-stage Vega-C has 8 % segments) don't overprint.
   const labelYs: number[] = []
   let prev = -Infinity
@@ -38,14 +30,6 @@ export function VehicleSchematic({ vehicle }: { vehicle: Vehicle }) {
       className="h-auto w-full max-w-[300px] text-[9px] uppercase tracking-widest"
     >
       <line x1={8} x2={width - 8} y1={ground} y2={ground} stroke="var(--border)" />
-      {reference ? (
-        <g>
-          <line x1={16} x2={width - 16} y1={reference.y} y2={reference.y} stroke={DIM} strokeDasharray="3 3" />
-          <text x={width - 16} y={reference.y - 4} textAnchor="end" fill={DIM}>
-            {reference.label}
-          </text>
-        </g>
-      ) : null}
       <g stroke={DIM} fill="none">
         <circle cx={human.x} cy={ground - human.h + 1.3} r={1.3} />
         <line x1={human.x} x2={human.x} y1={ground - human.h + 2.6} y2={ground} />

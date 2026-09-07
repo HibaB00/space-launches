@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import { toLaunch, type LL2Launch, type Vehicle } from './launches'
-import { HUMAN_M, inferBoosters, knownEngines, REFERENCE, schematicLayout } from './vehicle'
+import { compareToReference, HUMAN_M, inferBoosters, knownEngines, schematicLayout } from './vehicle'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
 const vehicle = (s: string) => launches.find((l) => l.name.includes(s))!.vehicle
 
 describe('schematicLayout', () => {
-  test('Falcon 9: two stages plus a fairing, to scale, no reference line against itself', () => {
+  test('Falcon 9: two stages plus a fairing, filling the drawing height', () => {
     const v = vehicle('USSF-153')
     const l = schematicLayout(v)!
     expect(l).not.toBeNull()
@@ -21,7 +21,7 @@ describe('schematicLayout', () => {
     expect(l.segments[0]!.y + l.segments[0]!.h).toBeCloseTo(l.ground, 6) // stage 1 sits on the ground
     expect(l.segments[2]!.y).toBeCloseTo(l.body.y, 6) // fairing reaches the top
     expect(l.human.h).toBeCloseTo(HUMAN_M * l.scale, 6)
-    expect(l.reference).toBeNull()
+    expect(l.body.y).toBeCloseTo(28, 6) // fills the drawing top to ground
     expect(l.boosters).toEqual([]) // the core is the body, not a strap-on
   })
   test('a crewed flight ends in a capsule named after its configuration', () => {
@@ -30,11 +30,18 @@ describe('schematicLayout', () => {
     expect(nose.kind).toBe('capsule')
     expect(nose.label).toBe('Crew Dragon 2')
   })
-  test('small rockets share the scale with the Falcon 9 reference line', () => {
+  test('small rockets fill the same height, with a proportionally bigger human beside them', () => {
     const electron = schematicLayout(vehicle('LOXSAT'))!
-    expect(electron.reference).toMatchObject({ label: `${REFERENCE.label} · 70 m` })
-    expect(electron.body.h).toBeCloseTo((18 / 70) * (electron.reference!.y - electron.ground) * -1, 6)
-    expect(electron.body.w).toBeGreaterThanOrEqual(6) // minimum drawable width
+    const f9 = schematicLayout(vehicle('USSF-153'))!
+    expect(electron.body.h).toBeCloseTo(f9.body.h, 6)
+    expect(electron.human.h).toBeGreaterThan(f9.human.h * 3)
+    expect(electron.body.w).toBeGreaterThanOrEqual(10) // minimum drawable width
+  })
+  test('compares heights to a Falcon 9 in words', () => {
+    expect(compareToReference(70)).toBe('about as tall as a Falcon 9')
+    expect(compareToReference(18)).toBe('about ¼ the height of a Falcon 9')
+    expect(compareToReference(124.4)).toBe('1.8× the height of a Falcon 9')
+    expect(compareToReference(46.3)).toBe('about ⅔ the height of a Falcon 9')
   })
   test('a single-stage vehicle is a stage plus a nose', () => {
     const l = schematicLayout(vehicle('Themis'))!

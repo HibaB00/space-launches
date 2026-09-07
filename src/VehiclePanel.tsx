@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Vehicle } from './launches'
 import { Panel } from './Panel'
-import { inferBoosters, knownEngines } from './vehicle'
+import { compareToReference, inferBoosters, knownEngines } from './vehicle'
 import { VehicleSchematic } from './VehicleSchematic'
 
 const NUM = new Intl.NumberFormat('en-US')
@@ -51,7 +51,7 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
           <>
             <VehicleSchematic vehicle={v} />
             <p className="text-[10px] text-pretty text-muted-foreground">
-              Schematic. Proportions from published length and diameter; the stage split is typical, not measured.
+              {v.lengthM} m tall, {compareToReference(v.lengthM)}. Proportions from published length and diameter; the stage split is typical, not measured.
             </p>
           </>
         ) : (

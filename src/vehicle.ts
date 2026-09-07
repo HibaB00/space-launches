@@ -80,18 +80,29 @@ export type SchematicLayout = {
   boosters: Rect[]
   style: FamilyStyle
   human: { x: number; h: number }
-  reference: { y: number; label: string } | null
+  /** kept for API stability; the Falcon 9 comparison is now rendered as text (see compareToReference) */
+  reference: null
+}
+
+/** "about ¼ of a Falcon 9", "as tall as a Falcon 9", "1.8× a Falcon 9". */
+export function compareToReference(lengthM: number): string {
+  const r = lengthM / REFERENCE.lengthM
+  if (r > 0.95 && r < 1.05) return `about as tall as a ${REFERENCE.label}`
+  if (r >= 1.05) return `${r.toFixed(1)}× the height of a ${REFERENCE.label}`
+  const fractions: [number, string][] = [[0.25, '¼'], [0.33, '⅓'], [0.5, '½'], [0.66, '⅔'], [0.75, '¾']]
+  const [, label] = fractions.reduce((best, f) => (Math.abs(f[0] - r) < Math.abs(best[0] - r) ? f : best))
+  return `about ${label} the height of a ${REFERENCE.label}`
 }
 
 export function schematicLayout(v: Pick<Vehicle, 'name' | 'lengthM' | 'diameterM' | 'stages' | 'boosters' | 'spacecraft'>, width = 280, height = 320): SchematicLayout | null {
   if (!v.lengthM || !v.diameterM) return null
-  const top = 24
+  const top = 28
   const ground = height - 28
-  // One scale for everything so the human, the reference line and the vehicle are comparable.
-  const tallest = Math.max(v.lengthM, REFERENCE.lengthM)
-  const scale = (ground - top) / tallest
+  // WHY: each vehicle fills the drawing; a shared scale made an 18 m Electron a matchstick under a 70 m line.
+  // The human figure (1.8 m, same scale) is what gives the size away; the Falcon 9 comparison is a sentence.
+  const scale = (ground - top) / v.lengthM
   const h = v.lengthM * scale
-  const w = Math.max(6, v.diameterM * scale)
+  const w = Math.max(10, v.diameterM * scale)
   const cx = 110
   const body: Rect = { x: cx - w / 2, y: ground - h, w, h }
 
@@ -142,6 +153,23 @@ export function schematicLayout(v: Pick<Vehicle, 'name' | 'lengthM' | 'diameterM
     boosters,
     style,
     human: { x: 30, h: HUMAN_M * scale },
-    reference: v.lengthM === REFERENCE.lengthM ? null : { y: ground - REFERENCE.lengthM * scale, label: `${REFERENCE.label} · ${REFERENCE.lengthM} m` },
+    reference: null,
   }
+}
+
+/** Nose outlines: ogive fairing, capsule (wide base, domed top), plain cone, or a Starship-style ship nose. */
+export function noseD(x: number, y: number, w: number, h: number, kind: Segment['kind']): string {
+  if (kind === 'ship') return `M${x},${y + h} L${x},${y + h * 0.3} Q${x},${y} ${x + w / 2},${y} Q${x + w},${y} ${x + w},${y + h * 0.3} L${x + w},${y + h} Z`
+  if (kind === 'capsule') return `M${x},${y + h} L${x + w * 0.15},${y + h * 0.35} Q${x + w / 2},${y - h * 0.05} ${x + w * 0.85},${y + h * 0.35} L${x + w},${y + h} Z`
+  if (kind === 'nose') return `M${x},${y + h} L${x + w / 2},${y} L${x + w},${y + h} Z`
+  return `M${x},${y + h} L${x},${y + h * 0.45} Q${x},${y} ${x + w / 2},${y} Q${x + w},${y} ${x + w},${y + h * 0.45} L${x + w},${y + h} Z`
+}
+
+/** The two halves of an ogive fairing, for the separation animation. */
+export function fairingHalvesD(x: number, y: number, w: number, h: number): [string, string] {
+  const cx = x + w / 2
+  return [
+    `M${x},${y + h} L${x},${y + h * 0.45} Q${x},${y} ${cx},${y} L${cx},${y + h} Z`,
+    `M${x + w},${y + h} L${x + w},${y + h * 0.45} Q${x + w},${y} ${cx},${y} L${cx},${y + h} Z`,
+  ]
 }
