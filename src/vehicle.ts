@@ -175,8 +175,9 @@ export function fairingHalvesD(x: number, y: number, w: number, h: number): [str
 }
 
 /**
- * Not-to-scale scene geometry for the animation: a hero rocket with a fixed hull width and a clamped aspect,
- * so Electron reads as a slender rocket instead of a line. Segments reuse the typical stage split.
+ * Not-to-scale geometry for the launch animation: a hero rocket with a fixed hull width and a clamped aspect,
+ * so Electron reads as a slender rocket instead of a line. Segments reuse the typical stage split. The stage draws it
+ * with cx = 0 and ground = 0 (base centre at the origin, up is −y) and moves the whole group along the trajectory.
  */
 export type Scene = { body: Rect; segments: Segment[]; boosters: Rect[]; style: FamilyStyle; ground: number }
 export function sceneLayout(v: Pick<Vehicle, 'name' | 'lengthM' | 'diameterM' | 'stages' | 'boosters' | 'spacecraft'>, cx = 160, ground = 372): Scene {

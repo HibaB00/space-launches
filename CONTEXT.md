@@ -38,6 +38,8 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Strongback / umbilical tower**: the pad structure that holds, fuels and powers the rocket until T-0 and swings away at liftoff.
 - **Engine restart**: upper stages often burn twice (SES-1 → SECO-1, coast, SES-2 → SECO-2) to raise an orbit or leave Earth; H3's MMX flight coasts for an hour between burns.
 - **Ordinal timeline**: events drawn with equal spacing regardless of the time between them, as SpaceX's webcast bar does; a linear axis would squash 8 minutes of flight against 38 minutes of countdown.
+- **Gravity turn**: the shape of an ascent: vertical off the pad, a small pitch-over, then gravity bends the path toward horizontal while thrust stays along the velocity vector; by MECO the vehicle is moving mostly sideways. Our arc has this shape but is not a trajectory.
+- **Flight profile**: the side-view infographic of a mission (SpaceX's launch pages): the ascent arc with the vehicle drawn at each milestone, labelled, plus the booster's **return leg** (entry burn, landing burn, landing) for reusable first stages.
 
 ## Vehicle
 
@@ -55,6 +57,9 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Link card**: a whole card that is one `<a>`, so it works with middle-click, keyboard and screen readers.
 - **iCalendar / .ics (RFC 5545)**: the text format calendars import or subscribe to; `UID` identifies an event across updates, `VALARM` is the reminder, lines fold at 75 octets.
 - **Occluder**: a solid object drawn just under a wireframe so the far side is hidden by the depth test.
+- **Pose**: the plain object of 0..1 numbers GSAP tweens for the launch sequence (`pose.ts`); the stage is a pure function of it, so scrubbing, live sync and reduced-motion seeks draw identical frames and the beats are testable without a DOM.
+- **Render on update**: drawing frames from the timeline's `onUpdate` instead of a `requestAnimationFrame` loop; a paused animation then costs nothing.
+- **Greedy label placement**: for each label in order, try anchors (below, above, right, left) and take the first box clear of everything placed so far; simple, deterministic, never overlaps (`profile.ts`).
 
 - **Launch (view model)**: the trimmed record our UI reads (`src/launches.ts`), produced from an LL2 record by `toLaunch()` in the fetch script. Upstream shape never reaches the browser.
 - **Build-time data / JAMstack**: data is fetched when the site is built, not when a visitor loads it. The site is static; a scheduled rebuild makes it "dynamic".

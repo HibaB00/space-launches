@@ -1,6 +1,6 @@
 # ADR-0007: The launch sequence as an animation of the vehicle
 
-Date: 2026-09-07 · Status: accepted
+Date: 2026-09-07 · Status: accepted; rendering superseded by ADR-0008 (two clocks, compressed time and not-to-scale stand)
 
 ## Context
 
