@@ -70,13 +70,17 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
     else tl.pause()
   }, [isLive, liveOrdinal, playing, times])
 
+  // WHY: a click scrubs to the event and then carries on from there, so the preview never sits frozen on one frame
+  // (it used to stay paused after a jump until Play was pressed). Pause still pauses; reduced motion seeks and stays.
   const jump = (i: number) => {
     const tl = tlRef.current
     if (!tl || isLive) return
-    setPlaying(false)
+    if (REDUCED_MOTION) {
+      tl.time(times[i]!)
+      return
+    }
     tl.pause()
-    if (REDUCED_MOTION) tl.time(times[i]!)
-    else tl.tweenTo(times[i]!, { duration: 0.6, ease: 'power2.inOut' })
+    tl.tweenTo(times[i]!, { duration: 0.6, ease: 'power2.inOut', onComplete: () => playing && tl.play() })
   }
 
   const idx = isLive ? Math.min(n - 1, Math.floor(liveOrdinal! + 1e-6)) : view.idx
