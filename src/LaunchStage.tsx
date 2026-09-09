@@ -106,7 +106,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
   useEffect(() => {
     const svg = svgRef.current
     if (!svg) return
-    const q = <T extends Element = SVGGElement>(sel: string) => svg.querySelector(sel) as T
+    const q = <T extends Element = SVGGElement>(sel: string) => svg.querySelector(sel) as T | null
     const all = <T extends Element = SVGGElement>(sel: string) => Array.from(svg.querySelectorAll(sel)) as T[]
     const rocket = q('.rocket')
     const stars = q('.stars')
@@ -123,11 +123,12 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
     const panels = all('.panel')
     const flames = [q('.flame1'), q('.flame2'), ...all('.flame-b')]
     const flameDims = [{ w: w * 1.3, len: h * 0.7 }, { w: w * 0.8, len: h * 0.3 }, ...boosters.map((b) => ({ w: b.w * 1.1, len: b.h * 0.5 }))]
-    const particles = flames.map((f) => Array.from(f.querySelectorAll('.pt')) as SVGCircleElement[])
+    const particles = flames.map((f) => Array.from(f?.querySelectorAll('.pt') ?? []) as SVGCircleElement[])
     const { ascent } = profile
     const noseH = nose.h
     const stage1H = stage1.h
-    const set = (el: Element, name: string, v: number | string) => el.setAttribute(name, typeof v === 'number' ? v.toFixed(3) : v)
+    // WHY: fairing halves, payload and panels only exist for fairing vehicles; a capsule or Starship has none, so a missing part is a no-op.
+    const set = (el: Element | null, name: string, v: number | string) => el?.setAttribute(name, typeof v === 'number' ? v.toFixed(3) : v)
 
     const render = (pose: Pose) => {
       const { p, alt, deploy: d, t } = pose
@@ -136,7 +137,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
       set(rocket, 'transform', `translate(${(pt.x + shake).toFixed(2)} ${pt.y.toFixed(2)}) rotate(${pt.angle.toFixed(2)})`)
       set(trail, 'stroke-dashoffset', ascent.length * (1 - p))
       set(stars, 'opacity', 0.25 + 0.55 * alt)
-      set(strongback, 'transform', `rotate(${(-16 * pose.lift).toFixed(2)} ${strongback.x1.baseVal.value} 0)`)
+      set(strongback, 'transform', `rotate(${(-16 * pose.lift).toFixed(2)} ${strongback?.x1.baseVal.value ?? 0} 0)`)
       set(padGlow, 'opacity', 0.9 * pose.throttle1 * (1 - pose.lift))
       // Separations, each in the vehicle's own frame.
       const sp = pose.stageSep
