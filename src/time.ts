@@ -55,3 +55,5 @@ export function padLocal(timeZone: string): Intl.DateTimeFormat {
 export const UTC_CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: 'UTC' })
 export const LOCAL_CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'short' })
 export const LOG_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+/** Schedule-board day headers: "Sat 11 Oct". */
+export const DAY_HEADER = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })

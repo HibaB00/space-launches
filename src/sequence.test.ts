@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import fixture from './fixtures/upcoming.json'
 import { GENERIC_TIMELINE, toLaunch, type LL2Launch } from './launches'
-import { classifyEvent, clockAt, eventTimes, ordinalAt, ordinalOfTime, segmentDuration, timeOfOrdinal } from './sequence'
+import { classifyEvent, clockAt, eventTimes, ordinalAt, ordinalOfTime, segmentDuration, timeOfOrdinal, typicalTelemetry } from './sequence'
 
 const launches = (fixture.results as unknown as LL2Launch[]).map(toLaunch)
 const f9 = launches.find((l) => l.name.includes('USSF-153'))!.timeline
@@ -56,5 +56,17 @@ describe('classifyEvent / eventTimes', () => {
     expect(ordinalOfTime(times, times[f9.length - 1]!)).toBe(f9.length - 1)
     expect(ordinalOfTime(times, 9999)).toBe(f9.length - 1)
     for (const o of [0, 1.5, 7.25, f9.length - 1]) expect(ordinalOfTime(times, timeOfOrdinal(times, o))).toBeCloseTo(o, 6)
+  })
+})
+
+describe('typicalTelemetry', () => {
+  test('null before liftoff, zero at liftoff, orbital speed by SECO, interpolated between', () => {
+    const at = (abbrev: string) => GENERIC_TIMELINE.findIndex((e) => e.abbrev === abbrev)
+    expect(typicalTelemetry(GENERIC_TIMELINE, at('Liftoff') - 0.5)).toBeNull()
+    expect(typicalTelemetry(GENERIC_TIMELINE, at('Liftoff'))).toEqual({ altKm: 0, kmps: 0 })
+    expect(typicalTelemetry(GENERIC_TIMELINE, at('SECO-1'))!.kmps).toBeCloseTo(7.8, 6)
+    const mid = typicalTelemetry(GENERIC_TIMELINE, at('Liftoff') + 0.5)!
+    expect(mid.altKm).toBeGreaterThan(0)
+    expect(mid.altKm).toBeLessThan(12)
   })
 })

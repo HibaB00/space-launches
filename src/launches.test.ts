@@ -7,6 +7,7 @@ import {
   youtubeEmbedUrl,
   countdownText,
   countdownMode,
+  dayKey,
   formatCountdown,
   formatCountdownShort,
   formatNet,
@@ -246,5 +247,17 @@ describe('formatCountdownShort / tabTitle', () => {
     expect(formatCountdownShort(-61_000)).toBe('T+00:01:01')
     const l = byName('Progress MS-35')
     expect(tabTitle(l, Date.parse(l.net) - HOUR)).toMatch(/^T-01:00:00 · Soyuz 2.1b · /)
+  })
+})
+
+describe('dayKey', () => {
+  test('today, tomorrow, a date, or the NET text for coarse dates', () => {
+    const l = byName('Progress MS-35')
+    const net = Date.parse(l.net)
+    expect(dayKey(l, net - 60_000)).toBe('today')
+    expect(dayKey(l, net - DAY)).toBe('tomorrow')
+    expect(dayKey(l, net - 3 * DAY)).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const coarse = launches.find((x) => x.netPrecision === 'M')!
+    expect(dayKey(coarse, net)).toMatch(/^NET /)
   })
 })

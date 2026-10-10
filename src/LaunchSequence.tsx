@@ -6,7 +6,7 @@ import { countdownMode, formatOffset, GENERIC_TIMELINE, isFlown, type Launch } f
 import { LaunchStage } from './LaunchStage'
 import { Panel } from './Panel'
 import { buildTimeline, POSE0, type Pose } from './pose'
-import { clockAt, eventTimes, ordinalAt, ordinalOfTime, timeOfOrdinal } from './sequence'
+import { clockAt, eventTimes, ordinalAt, ordinalOfTime, timeOfOrdinal, typicalTelemetry } from './sequence'
 import { sceneLayout } from './vehicle'
 
 // WHY: GSAP owns the motion (a scrubbable timeline with a beat per event, see pose.ts); React owns the markup and the
@@ -87,6 +87,7 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
   const ord = isLive ? liveOrdinal! : view.ord
   const clock = isLive ? tSec : view.clock
   const current = events[idx]!
+  const telemetry = typicalTelemetry(events, ord)
 
   return (
     <Panel
@@ -134,6 +135,20 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
             )}
           </div>
           <p className="whitespace-nowrap text-4xl sm:text-5xl">{formatOffset(clock)}</p>
+          {/* WHY: the webcast's two numbers. Typical for a medium-lift orbital launch, not this flight's telemetry (none is published). */}
+          {telemetry ? (
+            <p className="flex gap-5 text-sm" title="Typical values for a medium-lift orbital launch, interpolated between events. Not this flight's telemetry.">
+              <span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">speed </span>
+                {telemetry.kmps.toFixed(1)} km/s
+              </span>
+              <span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">altitude </span>
+                {Math.round(telemetry.altKm)} km
+              </span>
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">typical</span>
+            </p>
+          ) : null}
           <p className="text-sm uppercase tracking-widest">{current.abbrev}</p>
           <p className="max-w-sm text-sm text-pretty text-muted-foreground">{current.description}</p>
           {!published ? (

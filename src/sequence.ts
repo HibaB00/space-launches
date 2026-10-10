@@ -77,3 +77,37 @@ export function timeOfOrdinal(times: number[], ordinal: number): number {
   const f = Math.max(0, Math.min(1, ordinal - i))
   return n < 2 ? 0 : times[i]! + f * (times[i + 1]! - times[i]!)
 }
+
+/**
+ * Typical altitude (km) and speed (km/s) at each kind of event, from published Falcon 9 / Atlas / Ariane webcast
+ * telemetry rounded to what every medium-lift orbital launch roughly shares. WHY: no trajectory is published before a
+ * launch, but the webcast's two numbers are the physics lesson (MECO at ~2 km/s and 70 km; orbit at ~7.8 km/s), so the
+ * readout shows these, labelled typical, interpolated between events.
+ */
+const TYPICAL: Partial<Record<EventKind, { altKm: number; kmps: number }>> = {
+  ignition: { altKm: 0, kmps: 0 },
+  liftoff: { altKm: 0, kmps: 0 },
+  maxq: { altKm: 12, kmps: 0.45 },
+  boosterSep: { altKm: 45, kmps: 1.6 },
+  meco: { altKm: 70, kmps: 2.2 },
+  stageSep: { altKm: 75, kmps: 2.2 },
+  ses: { altKm: 80, kmps: 2.3 },
+  fairing: { altKm: 110, kmps: 2.8 },
+  seco: { altKm: 200, kmps: 7.8 },
+  deploy: { altKm: 300, kmps: 7.7 },
+}
+
+/** The typical altitude/speed at a flight ordinal, or null before liftoff and for events (landings) the table does not cover. */
+export function typicalTelemetry(events: TimelineEvent[], ordinal: number): { altKm: number; kmps: number } | null {
+  const known = events.map((e, i) => ({ i, t: TYPICAL[classifyEvent(e)] })).filter((x): x is { i: number; t: { altKm: number; kmps: number } } => !!x.t)
+  const liftoff = events.findIndex((e) => classifyEvent(e) === 'liftoff')
+  if (liftoff < 0 || ordinal < liftoff || known.length === 0) return null
+  const after = known.filter((k) => k.i >= liftoff)
+  if (after.length === 0) return null
+  const prev = [...after].reverse().find((k) => k.i <= ordinal)
+  const next = after.find((k) => k.i >= ordinal)
+  if (!prev) return null
+  if (!next || next.i === prev.i) return prev.t
+  const f = (ordinal - prev.i) / (next.i - prev.i)
+  return { altKm: prev.t.altKm + f * (next.t.altKm - prev.t.altKm), kmps: prev.t.kmps + f * (next.t.kmps - prev.t.kmps) }
+}

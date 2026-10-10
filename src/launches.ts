@@ -393,6 +393,21 @@ export function formatNet(launch: Launch): string {
   return `NET ${day}`
 }
 
+/**
+ * Which schedule-board row a launch sits under: 'today' | 'tomorrow' | an ISO local date | the NET text for coarse
+ * dates. WHY: a range schedule is read by day; twenty cards in one grid are not.
+ */
+export function dayKey(launch: Launch, now: number): string {
+  if (countdownMode(launch, now) === 'net-date') return formatNet(launch)
+  const d = new Date(launch.net)
+  const today = new Date(now)
+  const local = (x: Date) => `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`
+  const tomorrow = new Date(now + 86_400_000)
+  if (local(d) === local(today)) return 'today'
+  if (local(d) === local(tomorrow)) return 'tomorrow'
+  return local(d)
+}
+
 /** The one string a countdown cell shows, whatever the mode. */
 export function countdownText(launch: Launch, now: number): string {
   switch (countdownMode(launch, now)) {
