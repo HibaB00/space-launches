@@ -10,7 +10,7 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **net_precision**: Launch Library 2's flag for how well the time is known: Second, Minute, Hour, Day, Week, Month, Quarter, Half, Year. We only tick a countdown for Hour or finer; coarser shows "NET <date>".
 - **Hold**: a pause in the countdown clock. **Built-in holds** are planned pauses (e.g. T-20 min) to absorb slack; an unplanned hold means a problem. **Scrub**: the attempt is cancelled for the day.
 - **Status vocabulary** (LL2): **Go** (T-0 confirmed by official or reliable sources), **TBC** (to be confirmed: date/time expected but awaiting official confirmation), **TBD** (to be determined: date is an estimate), **Hold**, **In Flight**, **Success**, **Failure**, **Partial Failure**.
-- **Flown**: a launch whose status is terminal (Success, Failure, Partial Failure). Shown with its **outcome** instead of a countdown, and kept in the **archive** (`data/past.json`, ADR-0009) so its page and calendar links keep working.
+- **Flown**: a launch whose status is terminal (Success, Failure, Partial Failure). Shown with its **outcome** instead of a countdown, and kept in the **archive** (`past.json`, ADR-0009) so its page and calendar links keep working.
 - **Landing outcome**: LL2 records `attempt` and `success` per booster; an expended core has a landing record with `attempt: false` (location "ATL", the Atlantic), which we do not call a landing.
 
 ## Places

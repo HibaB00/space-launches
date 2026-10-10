@@ -8,13 +8,12 @@ import { SITE_URL } from '../src/site.ts'
 // WHY: mode=detailed is the only mode that carries webcast links; hide_recent_previous drops launches
 // from the last 24 h that the endpoint otherwise includes "for convenience".
 const UPCOMING = 'https://ll.thespacedevs.com/2.3.0/launches/upcoming/?mode=detailed&hide_recent_previous=true&limit=20'
-// WHY: the last 20 flown launches carry the outcome, the landing result and the final mission log. Merged into a
-// committed archive so a launch keeps its page after it flies (docs/adr/0009-archive-in-git.md). Two requests per
-// build, four per hour at the 30-minute cadence, against LL2's 15 per hour per IP.
+// WHY: the last 20 flown launches carry the outcome, the landing result and the final mission log. Merged into an
+// archive that carries over between builds so a launch keeps its page after it flies (docs/adr/0009-archive-in-git.md).
+// Two requests per build, four per hour at the 30-minute cadence, against LL2's 15 per hour per IP.
 const PREVIOUS = 'https://ll.thespacedevs.com/2.3.0/launches/previous/?mode=detailed&limit=20'
 const OUT = new URL('../public/launches.json', import.meta.url)
 const ICS_OUT = new URL('../public/launches.ics', import.meta.url)
-const ARCHIVE = new URL('../data/past.json', import.meta.url)
 const PAST_OUT = new URL('../public/past.json', import.meta.url)
 
 async function fetchLaunches(url: string): Promise<LL2Launch[]> {
@@ -37,17 +36,14 @@ await Bun.write(ICS_OUT, feedIcs(launches, fetchedAt))
 console.log(`wrote ${launches.length} launches to ${OUT.pathname} (${(JSON.stringify(feed).length / 1024).toFixed(1)} KB)`)
 
 const previous = (await fetchLaunches(PREVIOUS)).map(toLaunch)
-const archiveFile = Bun.file(ARCHIVE)
-const seed: { launches: Launch[] } = (await archiveFile.exists()) ? await archiveFile.json() : { launches: [] }
-// WHY: CI never commits (only Hiba pushes), so the archive carries over through the deployed site: the live past.json is
-// merged in, then the committed seed, then today's flown launches. A missing or failed live copy just means no carry-over.
+// WHY: nothing is committed (only Hiba pushes), so the archive carries over through the deployed site: the live past.json
+// is merged with whatever this machine already has, then today's flown launches. A missing live copy just means no carry-over.
+const local: { launches: Launch[] } = (await Bun.file(PAST_OUT).exists()) ? await Bun.file(PAST_OUT).json() : { launches: [] }
 const live: { launches: Launch[] } = await fetch(`${SITE_URL}past.json`, { headers: { accept: 'application/json' } })
   .then((r) => (r.ok ? (r.json() as Promise<{ launches: Launch[] }>) : { launches: [] }))
   .catch(() => ({ launches: [] }))
-const past = mergeArchive(mergeArchive(live.launches, seed.launches), previous)
-// WHY: pretty-printed, one launch per diff hunk, so a commit of the seed reads as "these launches flew".
-await Bun.write(ARCHIVE, JSON.stringify({ launches: past }, null, 1))
+const past = mergeArchive(mergeArchive(local.launches, live.launches), previous)
 await Bun.write(PAST_OUT, JSON.stringify({ fetchedAt, launches: past }))
-console.log(`archive: ${past.length} flown launches (${live.launches.length} carried over from the site, ${seed.launches.length} in data/past.json)`)
+console.log(`archive: ${past.length} flown launches (${live.launches.length} on the live site, ${local.launches.length} already here)`)
 
 type Launch = ReturnType<typeof toLaunch>
