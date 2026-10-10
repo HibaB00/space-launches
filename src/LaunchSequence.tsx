@@ -32,6 +32,7 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
   const renderRef = useRef<((p: Pose) => void) | null>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const [playing, setPlaying] = useState(!REDUCED_MOTION)
+  const scrubberRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ idx: 0, clock: events[0]!.offsetSec, ord: 0 })
 
   // Build the timeline once per launch. Frames are drawn from onUpdate, so a paused timeline costs nothing.
@@ -84,6 +85,16 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
   }
 
   const idx = isLive ? Math.min(n - 1, Math.floor(liveOrdinal! + 1e-6)) : view.idx
+
+  // WHY: the scrubber is wider than the panel, so it scrolls itself to keep the current event centred as the animation
+  // moves on (scrollTo on the container, not scrollIntoView, which would also scroll the page).
+  useEffect(() => {
+    const box = scrubberRef.current
+    const li = box?.querySelectorAll<HTMLLIElement>('li')[idx]
+    if (!box || !li) return
+    const left = li.offsetLeft + li.offsetWidth / 2 - box.clientWidth / 2
+    box.scrollTo({ left: Math.max(0, left), behavior: REDUCED_MOTION ? 'auto' : 'smooth' })
+  }, [idx])
   const ord = isLive ? liveOrdinal! : view.ord
   const clock = isLive ? tSec : view.clock
   const current = events[idx]!
@@ -159,7 +170,7 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
         </div>
       </div>
 
-      <div className="overflow-x-auto p-4 pt-3">
+      <div ref={scrubberRef} className="overflow-x-auto p-4 pt-3">
         <ol className="relative h-24" style={{ minWidth: `${n * 104}px` }} aria-label="Sequence events">
           <div aria-hidden="true" className="absolute top-3 right-12 left-12 h-px bg-border" />
           <div aria-hidden="true" className="absolute top-3 left-12 h-px bg-live" style={{ width: `calc((100% - 6rem) * ${ord / (n - 1)})` }} />
