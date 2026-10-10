@@ -40,8 +40,20 @@ export function arc(p0: Pt, p1: Pt, p2: Pt, p3: Pt, samples = 240): Arc {
 export const quadratic = (p0: Pt, c: Pt, p3: Pt): Arc =>
   arc(p0, { x: p0.x + (2 / 3) * (c.x - p0.x), y: p0.y + (2 / 3) * (c.y - p0.y) }, { x: p3.x + (2 / 3) * (c.x - p3.x), y: p3.y + (2 / 3) * (c.y - p3.y) }, p3)
 
-/** Events that belong to the first stage's return (drawn on the return leg), not the ascent. */
-export const isReturnEvent = (e: TimelineEvent) => /entry burn|landing|boostback|flip|grid fin/i.test(`${e.abbrev} ${e.description}`)
+const RETURN_WORDS = /entry burn|landing|boostback|flip|grid fin/i
+const UPPER_WORDS = /starship|\bship\b|dragon|capsule|orion|stage ?2|second stage|upper stage|payload/i
+/**
+ * Events that belong to the first stage's return (drawn on the return leg), not the ascent.
+ * WHY: a booster lands while the second stage is still burning, so a landing before SECO is the booster's; a landing
+ * after it (Starship's flip and splashdown at T+1:05, Dragon's landing) is the upper stage's and stays on the ascent.
+ */
+export function isReturnEvent(events: TimelineEvent[], i: number): boolean {
+  const e = events[i]!
+  const text = `${e.abbrev} ${e.description}`
+  if (!RETURN_WORDS.test(text)) return false
+  const seco = events.findIndex((x) => classifyEvent(x) === 'seco')
+  return seco >= 0 ? i < seco : !UPPER_WORDS.test(text)
+}
 
 export type Config = { boosters: boolean; stage1: boolean; fairing: boolean; deployed: boolean; engine1: boolean; engine2: boolean; return: boolean; lit: boolean }
 
@@ -89,7 +101,7 @@ export function configAt(events: TimelineEvent[], i: number, { hasBoosters, hasF
     }
   }
   const e = events[i]!
-  const ret = isReturnEvent(e)
+  const ret = isReturnEvent(events, i)
   return { boosters, stage1, fairing, deployed, engine1, engine2, return: ret, lit: ret && /burn/i.test(e.abbrev) && !/shutdown|end|cut/i.test(e.abbrev) }
 }
 
@@ -137,4 +149,78 @@ export function placeLabels(markers: { x: number; y: number; w: number; h: numbe
     taken.push(box)
     return { box, anchor: order[0]! }
   })
+}
+
+const DESCENT_WORDS = /entry|re-?entry|deorbit|transonic|subsonic|flip|landing|splashdown|touchdown|parachute|chute/i
+/**
+ * Index of the upper stage's first descent event (Starship's deorbit burn and belly-flop, Dragon's re-entry), or -1.
+ * WHY: only after SECO can the upper stage come down; those events are drawn on a descent leg at the right, not piled
+ * onto the end of the ascent.
+ */
+export function descentStart(events: TimelineEvent[]): number {
+  const seco = events.findIndex((e) => classifyEvent(e) === 'seco')
+  return seco < 0 ? -1 : events.findIndex((e, k) => k > seco && DESCENT_WORDS.test(`${e.abbrev} ${e.description}`))
+}
+
+/** Indices of the flight events on the ascent arc: from liftoff on, minus the booster's return and the upper stage's descent. */
+export function ascentIndices(events: TimelineEvent[], liftoff: number): number[] {
+  const d = descentStart(events)
+  return events.map((_, i) => i).filter((i) => i >= liftoff && (d < 0 || i < d) && !isReturnEvent(events, i))
+}
+
+/** Indices of the upper stage's descent events, in order. */
+export function descentIndices(events: TimelineEvent[]): number[] {
+  const d = descentStart(events)
+  return d < 0 ? [] : events.map((_, i) => i).filter((i) => i >= d && !isReturnEvent(events, i))
+}
+
+/** 0..1 along a path whose waypoints are the given event indices, piecewise linear in the flight ordinal. */
+export function pathU(indices: number[], ordinal: number): number {
+  if (indices.length < 2) return 0
+  const uOf = (k: number) => k / (indices.length - 1)
+  if (ordinal <= indices[0]!) return 0
+  if (ordinal >= indices[indices.length - 1]!) return 1
+  for (let k = 1; k < indices.length; k++) {
+    const a = indices[k - 1]!
+    const b = indices[k]!
+    if (ordinal <= b) return uOf(k - 1) + ((ordinal - a) / (b - a)) * (uOf(k) - uOf(k - 1))
+  }
+  return 1
+}
+
+/**
+ * Position along the ascent arc (0..1) of a flight ordinal. Return and descent events take time without moving the
+ * vehicle along the ascent, so the hero still lands on each ascent marker at its event.
+ */
+export const ascentU = (events: TimelineEvent[], liftoff: number, ordinal: number) => pathU(ascentIndices(events, liftoff), ordinal)
+
+/** Position along the descent leg (0..1): 0 at the last ascent event, 1 at the last descent event. */
+export function descentU(events: TimelineEvent[], liftoff: number, ordinal: number): number {
+  const asc = ascentIndices(events, liftoff)
+  const des = descentIndices(events)
+  return des.length === 0 ? 0 : pathU([asc[asc.length - 1] ?? liftoff, ...des], ordinal)
+}
+
+export type MarkerGroup = { i: number; e: TimelineEvent; until: TimelineEvent | null }
+
+/**
+ * One marker per burn or sequence: "entry burn startup" + "entry burn shutdown" become one "entry burn" marker with
+ * both times, the way SpaceX's own profile draws them. WHY: six return events two seconds apart cannot each carry a label.
+ */
+export function collapseBurns(events: TimelineEvent[], from = 0): MarkerGroup[] {
+  const out: MarkerGroup[] = []
+  const consumed = new Set<number>()
+  for (let i = from; i < events.length; i++) {
+    if (consumed.has(i)) continue
+    const e = events[i]!
+    const start = e.abbrev.match(/^(.+?)\s*(startup|start|ignition|begin)$/i)
+    // WHY: the end is not always the next event: a Falcon 9 boostback burn brackets the fairing separation.
+    const endRe = start ? new RegExp(`^${start[1]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(shutdown|cutoff|cut-off|end|complete)$`, 'i') : null
+    const j = endRe ? events.findIndex((x, k) => k > i && k <= i + 3 && endRe.test(x.abbrev)) : -1
+    if (start && j > 0) {
+      consumed.add(j)
+      out.push({ i, e: { ...e, abbrev: start[1]! }, until: events[j]! })
+    } else out.push({ i, e, until: null })
+  }
+  return out
 }

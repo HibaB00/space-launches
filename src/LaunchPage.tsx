@@ -5,8 +5,9 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { GlobeBoundary, GlobeFallback } from './Home'
 import { googleCalendarUrl, launchIcs } from './ics'
-import { countdownMode, countdownText, formatNet, padsOf, siteName, youtubeEmbedUrl } from './launches'
+import { countdownMode, countdownText, formatNet, isFlown, padsOf, siteName, youtubeEmbedUrl } from './launches'
 import { LaunchSequence } from './LaunchSequence'
+import { LaunchList } from './LaunchList'
 import { Panel } from './Panel'
 import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
@@ -16,9 +17,10 @@ import { VehiclePanel } from './VehiclePanel'
 
 const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
-export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number }) {
+export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past: LaunchFeed | null; now: number }) {
   const { id } = useParams()
-  const launch = feed?.launches.find((l) => l.id === id) ?? null
+  // WHY: upcoming first, then the archive, so a launch's URL (and the calendar event pointing at it) outlives the launch.
+  const launch = feed?.launches.find((l) => l.id === id) ?? past?.launches.find((l) => l.id === id) ?? null
   // Hooks run unconditionally; the early returns come after.
   const pads = useMemo(() => (launch ? padsOf([launch]) : []), [launch])
   // WHY: stamped with fetchedAt, not `now`, so the calendar URLs are stable and not rebuilt every second.
@@ -30,9 +32,10 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
     [launch, feed],
   )
 
-  if (!feed) return <p className="text-muted-foreground">Loading launch…</p>
-  if (!launch || !calendar) return <NotFound />
+  if (!feed || (!launch && !past)) return <p className="text-muted-foreground">Loading launch…</p>
+  if (!launch || !calendar) return <NotFound feed={feed} now={now} />
 
+  const flown = isFlown(launch)
   const mode = countdownMode(launch, now)
   const net = new Date(launch.net)
   const timed = mode !== 'net-date'
@@ -67,6 +70,7 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           </p>
           {timed ? (
             <p className="text-sm text-muted-foreground">
+              {flown ? 'Lifted off ' : ''}
               <time dateTime={launch.net}>{LOCAL.format(net)}</time> · {UTC.format(net)} UTC · {padLocal(launch.pad.timezone).format(net)} at the pad
             </p>
           ) : (
@@ -75,18 +79,22 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           <div className="flex flex-wrap gap-3 pt-2">
             {launch.webcast ? (
               <a href={launch.webcast} target="_blank" rel="noreferrer" className={cn(buttonVariants(), 'bg-live text-background hover:bg-live/90')}>
-                Watch live ↗
+                {flown ? 'Watch replay ↗' : 'Watch live ↗'}
               </a>
             ) : null}
             {/* WHY: "notify me" on a static site is a calendar event. Google's template link opens a prefilled event and
                 Google applies the visitor's own reminders; the .ics is the same event for any other calendar, with a
                 15-minute alarm baked in. No server, no push permission, works on every device. */}
-            <a href={calendar.google} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
-              Add to Google Calendar ↗
-            </a>
-            <a href={calendar.ics} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'ghost' })} title="Download the event for Apple Calendar, Outlook or any other calendar (15-minute alarm included)">
-              Apple / Outlook (.ics)
-            </a>
+            {flown ? null : (
+              <>
+                <a href={calendar.google} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
+                  Add to Google Calendar ↗
+                </a>
+                <a href={calendar.ics} download={`${launch.mission.name.replace(/[^\w-]+/g, '-')}.ics`} className={buttonVariants({ variant: 'ghost' })} title="Download the event for Apple Calendar, Outlook or any other calendar (15-minute alarm included)">
+                  Apple / Outlook (.ics)
+                </a>
+              </>
+            )}
             {launch.flightClub ? (
               <a href={launch.flightClub} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'outline' })}>
                 Trajectory on Flight Club ↗
@@ -101,10 +109,9 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
 
       <LaunchSequence launch={launch} now={now} />
 
-      {/* WHY: Mission and Mission log stack at their natural heights in one column; the site panel takes the other.
-          Three equal-height columns left the two text panels two-thirds empty next to the tall globe. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex flex-col gap-4">
+      {/* WHY: Mission and Launch site side by side at their natural heights (items-start: a stretched site panel either
+          gapped between globe and facts or grew the globe to fill it), the log full width under them. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Panel label="Mission" bodyClassName="space-y-5 p-4">
           <p className="text-pretty break-words">{launch.mission.description || 'No mission description published yet.'}</p>
           {embed ? (
@@ -144,42 +151,15 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
             </figure>
           ) : null}
         </Panel>
-
-        <Panel label="Mission log" actions={<span>{launch.updates.length} updates</span>}>
-          {launch.updates.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No updates logged yet.</p>
-          ) : (
-            <ol className="divide-y divide-border text-xs">
-              {launch.updates.map((u) => (
-                <li key={`${u.at}-${u.by}`} className="grid grid-cols-[max-content_1fr] gap-x-3 px-3 py-2.5">
-                  <time dateTime={u.at} className="whitespace-nowrap text-muted-foreground">
-                    {LOG_TIME.format(new Date(u.at))}
-                  </time>
-                  <p className="text-pretty break-words">
-                    {u.comment} <span className="text-muted-foreground">· {u.by}</span>
-                    {u.url ? (
-                      <>
-                        {' '}
-                        <a href={u.url} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-live">
-                          source ↗
-                        </a>
-                      </>
-                    ) : null}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          )}
-        </Panel>
-
-        </div>
         <Panel label="Launch site" bodyClassName="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="aspect-[4/3] border border-border">
-            <GlobeBoundary>
-              <Suspense fallback={<GlobeFallback />}>
-                <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
-              </Suspense>
-            </GlobeBoundary>
+          <div className="relative aspect-[4/3] border border-border">
+            <div className="absolute inset-0">
+              <GlobeBoundary>
+                <Suspense fallback={<GlobeFallback />}>
+                  <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
+                </Suspense>
+              </GlobeBoundary>
+            </div>
           </div>
           <div className="space-y-4">
             <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
@@ -207,7 +187,34 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
         </Panel>
       </div>
 
-      <VehiclePanel vehicle={launch.vehicle} />
+      <Panel label="Mission log" actions={<span>{launch.updates.length} updates</span>}>
+          {launch.updates.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No updates logged yet.</p>
+          ) : (
+            <ol className="divide-y divide-border text-xs">
+              {launch.updates.map((u) => (
+                <li key={`${u.at}-${u.by}`} className="grid grid-cols-[max-content_1fr] gap-x-3 px-3 py-2.5">
+                  <time dateTime={u.at} className="whitespace-nowrap text-muted-foreground">
+                    {LOG_TIME.format(new Date(u.at))}
+                  </time>
+                  <p className="text-pretty break-words">
+                    {u.comment} <span className="text-muted-foreground">· {u.by}</span>
+                    {u.url ? (
+                      <>
+                        {' '}
+                        <a href={u.url} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-live">
+                          source ↗
+                        </a>
+                      </>
+                    ) : null}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          )}
+      </Panel>
+
+      <VehiclePanel vehicle={launch.vehicle} flown={flown} />
     </article>
   )
 }
@@ -230,15 +237,27 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function NotFound() {
+// WHY: a dead link (an old calendar event, a typo) should land on the schedule, not on a dead end. The readout keeps
+// the control-room voice; the list below is the same one as the home page.
+export function NotFound({ feed, now }: { feed: LaunchFeed | null; now: number }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <title>Not found · Space Launches</title>
-      <p className="text-2xl">No such launch.</p>
-      <p className="text-muted-foreground">It may have flown, been removed from the schedule, or the link is wrong.</p>
-      <Link to="/" className={buttonVariants({ variant: 'outline' })}>
-        ← All launches
-      </Link>
+      <Panel label="Signal lost" bodyClassName="space-y-3 p-6 sm:p-8">
+        <p className="text-3xl sm:text-5xl">
+          NO SUCH LAUNCH
+          <span className="cursor" aria-hidden="true">
+            ▌
+          </span>
+        </p>
+        <p className="max-w-prose text-sm text-pretty text-muted-foreground">
+          Nothing on the schedule or in the archive has this id. It may have been removed from the schedule, be older than the archive, or the link is wrong.
+        </p>
+        <Link to="/" className={buttonVariants({ variant: 'outline' })}>
+          ← All launches
+        </Link>
+      </Panel>
+      {feed ? <LaunchList launches={feed.launches} now={now} /> : null}
     </div>
   )
 }

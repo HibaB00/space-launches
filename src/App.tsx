@@ -4,11 +4,13 @@ import { Home } from './Home'
 import { googleSubscribeUrl } from './ics'
 import { LaunchPage, NotFound } from './LaunchPage'
 import { LOCAL, LOCAL_CLOCK, UTC_CLOCK } from './time'
-import { useLaunches } from './useLaunches'
+import { FEED_URL, PAST_URL, useFeed } from './useLaunches'
 import { useNow } from './useNow'
 
 export default function App() {
-  const { feed, error } = useLaunches()
+  const { feed, error } = useFeed(FEED_URL)
+  // WHY: the archive is a second file so the upcoming feed stays small; a missing archive only hides the Recent panel.
+  const { feed: past } = useFeed(PAST_URL)
   const now = useNow()
   return (
     // WHY: basename is Vite's base. Same sub-path problem as asset URLs, one layer up: the router must know the
@@ -43,9 +45,9 @@ export default function App() {
           </div>
         </header>
         <Routes>
-          <Route path="/" element={<Home feed={feed} error={error} now={now} />} />
-          <Route path="/launch/:id" element={<LaunchPage feed={feed} now={now} />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/" element={<Home feed={feed} past={past} error={error} now={now} />} />
+          <Route path="/launch/:id" element={<LaunchPage feed={feed} past={past} now={now} />} />
+          <Route path="*" element={<NotFound feed={feed} now={now} />} />
         </Routes>
         {feed ? <Footer fetchedAt={feed.fetchedAt} now={now} /> : null}
       </main>

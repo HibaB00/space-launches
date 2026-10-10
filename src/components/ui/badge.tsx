@@ -14,6 +14,8 @@ const badgeVariants = cva(
         secondary: "border-caution text-caution",
         destructive: "bg-nogo text-background motion-safe:animate-pulse",
         outline: "border-caution/50 text-caution/80",
+        nogo: "bg-nogo text-background",
+        live: "bg-live text-background motion-safe:animate-pulse",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",

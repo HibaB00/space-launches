@@ -5,16 +5,18 @@ export type LaunchFeed = { fetchedAt: string; launches: Launch[] }
 
 // WHY: relative to Vite's BASE_URL, so the request is /space-launches/launches.json on GitHub Pages
 // and /launches.json in dev. A bare "launches.json" would break if the page URL lacked its trailing slash.
-const FEED_URL = `${import.meta.env.BASE_URL}launches.json`
+export const FEED_URL = `${import.meta.env.BASE_URL}launches.json`
+/** Flown launches, newest first: the committed archive (docs/adr/0009-archive-in-git.md), copied to public/ by the fetch script. */
+export const PAST_URL = `${import.meta.env.BASE_URL}past.json`
 
 // WHY: the deploy cron runs every 30 min; re-fetching every 10 keeps an open tab at most ~40 min behind.
 const REFRESH_MS = 10 * 60_000
 
 /**
- * Loads the JSON the fetch script baked into the build, and re-loads it periodically.
- * WHY not SWR (client-swr-dedup): there is exactly one consumer of this hook, so there is nothing to deduplicate.
+ * Loads one JSON feed the fetch script baked into the build, and re-loads it periodically.
+ * WHY not SWR (client-swr-dedup): each feed has exactly one consumer, so there is nothing to deduplicate.
  */
-export function useLaunches(): { feed: LaunchFeed | null; error: string | null } {
+export function useFeed(url: string): { feed: LaunchFeed | null; error: string | null } {
   const [feed, setFeed] = useState<LaunchFeed | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +25,7 @@ export function useLaunches(): { feed: LaunchFeed | null; error: string | null }
     const load = () =>
       // WHY: cache: 'no-cache' makes the browser revalidate with the CDN instead of trusting its heuristic cache,
       // otherwise the 10-minute refresh could keep returning the same stale copy for hours.
-      fetch(FEED_URL, { cache: 'no-cache' })
+      fetch(url, { cache: 'no-cache' })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json() as Promise<LaunchFeed>
@@ -46,7 +48,7 @@ export function useLaunches(): { feed: LaunchFeed | null; error: string | null }
       cancelled = true
       clearInterval(id)
     }
-  }, [])
+  }, [url])
 
   return { feed, error }
 }

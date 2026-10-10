@@ -8,7 +8,16 @@ const NUM = new Intl.NumberFormat('en-US')
 const fmt = (n: number | null, unit: string) => (n === null ? null : `${NUM.format(n)} ${unit}`)
 const money = (usd: number | null) => (usd === null ? null : usd >= 1e9 ? `$${(usd / 1e9).toFixed(1)}B` : `$${Math.round(usd / 1e6)}M`)
 
-export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
+// WHY: LL2 records landing.success once the launch has flown; before that it is null and the plan is all we have.
+const landingText = (b: Vehicle['boosters'][number], flown: boolean) => {
+  if (!b.landing) return ' · expended'
+  const where = b.landing.location || 'a landing zone'
+  const downrange = b.landing.downrangeKm ? ` (${NUM.format(b.landing.downrangeKm)} km downrange)` : ''
+  if (!flown || b.landing.success === null) return ` · ${flown ? 'landing outcome not yet recorded' : `lands on ${where}`}${downrange}`
+  return b.landing.success ? ` · landed on ${where}${downrange}` : ` · landing on ${where} failed${downrange}`
+}
+
+export function VehiclePanel({ vehicle: v, flown = false }: { vehicle: Vehicle; flown?: boolean }) {
   const rate = v.record.total > 0 ? Math.round((v.record.success / v.record.total) * 100) : null
   const inferred = inferBoosters(v)
   const engines = knownEngines(v.name)
@@ -73,7 +82,7 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
 
       <div className="space-y-5">
         <section className="space-y-2">
-          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground">Flying today</h3>
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground">{flown ? 'Flew' : 'Flying today'}</h3>
           <ul className="divide-y divide-border text-sm">
             {v.boosters.map((b, i) => (
               <li key={`${b.serial}-${i}`} className="py-2" title={b.landing?.description}>
@@ -84,11 +93,7 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
                 {b.flightNumber ? <span className="text-muted-foreground"> · flight {b.flightNumber}</span> : null}
                 <span className="text-muted-foreground">{b.reused ? ' · flight-proven' : b.flightNumber === 1 ? ' · new' : ''}</span>
                 {/* WHY: the landing plan is the most-asked question about a reusable booster; downrange distance says how hard the ascent was. */}
-                <span className="text-muted-foreground">
-                  {b.landing
-                    ? ` · lands on ${b.landing.location || 'a landing zone'}${b.landing.downrangeKm ? ` (${NUM.format(b.landing.downrangeKm)} km downrange)` : ''}`
-                    : ' · expended'}
-                </span>
+                <span className={b.landing?.success === false ? 'text-nogo' : 'text-muted-foreground'}>{landingText(b, flown)}</span>
               </li>
             ))}
             {inferred.source === 'name' ? (
@@ -117,10 +122,11 @@ export function VehiclePanel({ vehicle: v }: { vehicle: Vehicle }) {
           </ul>
         </section>
         {v.description ? (
-          <details className="group text-sm">
-            <summary className="cursor-pointer text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground">About {v.name}</summary>
-            <p className="mt-2 text-pretty break-words text-muted-foreground">{v.description}</p>
-          </details>
+          // WHY: not a <details>: expanding it reflowed the whole panel, and a one-paragraph description needs no hiding.
+          <section className="space-y-2 text-sm">
+            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground">About {v.name}</h3>
+            <p className="text-pretty break-words text-muted-foreground">{v.description}</p>
+          </section>
         ) : null}
         {v.image ? (
           <figure className="space-y-1">

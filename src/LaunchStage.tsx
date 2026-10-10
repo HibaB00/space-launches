@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { formatOffset, type TimelineEvent, type Vehicle } from './launches'
 import type { Pose } from './pose'
-import { arc, configAt, isReturnEvent, placeLabels, quadratic, type Anchor, type Config } from './profile'
+import { arc, ascentU, collapseBurns, configAt, descentIndices, placeLabels, quadratic, type Anchor, type Config } from './profile'
 import { classifyEvent } from './sequence'
 import { fairingHalvesD, noseD, sceneLayout, type Scene } from './vehicle'
 
@@ -61,26 +61,41 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
   // and a label position for each that avoids the readout, the silhouettes and the other labels.
   const profile = useMemo(() => {
     const liftoff = Math.max(0, events.findIndex((e) => classifyEvent(e) === 'liftoff'))
-    const nFlight = events.length - liftoff
-    const u = (i: number) => (nFlight > 1 ? (i - liftoff) / (nFlight - 1) : 0)
+    // WHY: one marker per burn (startup + shutdown collapsed), spaced along the arc by ascent ordinal so the last
+    // ascent event (SECO, deploy) sits at the end of the arc: the drawing ends where the flight does.
+    const groups = collapseBurns(events, liftoff)
+    const u = (i: number) => ascentU(events, liftoff, i)
     // WHY: the shape of a gravity turn, not a trajectory: vertical off the pad, bending over to nearly level at the top
     // right. Shallow on the left so the readout overlay (top-left) stays clear.
-    const ascent = arc({ x: 0.07 * W, y: GROUND }, { x: 0.07 * W, y: 290 }, { x: 0.4 * W, y: 100 }, { x: 0.94 * W, y: 62 })
-    const returns = events.map((_, i) => i).filter((i) => i >= liftoff && isReturnEvent(events[i]!))
+    const descents = descentIndices(events)
+    // WHY: when the upper stage comes back (Starship, Dragon) the ascent stops short and a descent leg falls to the
+    // ground at the right edge, so re-entry and landing events have their own room instead of crowding the apex.
+    const endX = descents.length > 0 ? 0.6 * W : 0.94 * W
+    const ascent = arc({ x: 0.07 * W, y: GROUND }, { x: 0.07 * W, y: 290 }, { x: 0.4 * W, y: 100 }, { x: endX, y: 62 })
+    const apex = ascent.at(1)
+    const desc = descents.length > 0 ? quadratic(apex, { x: 0.86 * W, y: 80 }, { x: 0.93 * W, y: GROUND }) : null
+    const returns = groups.filter((g) => configAt(events, g.i, flags).return).map((g) => g.i)
     const sepIdx = events.findIndex((e) => classifyEvent(e) === 'stageSep' || classifyEvent(e) === 'ses')
     let ret = null
     if (returns.length > 0) {
-      const S = ascent.at(u(sepIdx >= 0 ? sepIdx : liftoff + Math.round((nFlight - 1) * 0.4)))
-      // WHY: drawn descending under the ascent rather than as the real ballistic loop above it: the frame is small and the loop would cross the labels.
-      ret = quadratic(S, { x: S.x + 0.12 * W, y: S.y + 0.5 * (GROUND - S.y) }, { x: S.x + 0.2 * W, y: GROUND })
+      const S = ascent.at(u(sepIdx >= 0 ? sepIdx : returns[0]!))
+      // WHY: the booster's return is drawn as a long shallow fall under the ascent, not SpaceX's loop above it: the
+      // loop crosses the ascent labels in a 420-unit frame, and the empty lower right is where the labels have room.
+      ret = quadratic(S, { x: S.x + 0.12 * W, y: S.y + 0.25 * (GROUND - S.y) }, { x: S.x + 0.32 * W, y: GROUND })
     }
-    const markers = events.slice(liftoff).map((e, j) => {
-      const i = liftoff + j
+    const markers = groups.map(({ i, e, until }) => {
       const cfg = configAt(events, i, flags)
-      const pos = cfg.return && ret ? ret.at(0.35 + (0.65 * (returns.indexOf(i) + 1)) / returns.length) : ascent.at(u(i))
-      const time = formatOffset(e.offsetSec)
-      const prefer: Anchor[] | undefined = i === liftoff ? ['right'] : cfg.return ? ['right', 'left', 'below'] : undefined
-      return { i, e, cfg, pos, w: Math.max(e.abbrev.length, time.length) * 7 + 4, h: 24, prefer }
+      const rk = returns.indexOf(i)
+      const dk = descents.indexOf(i)
+      const pos = cfg.return && ret ? ret.at(0.25 + (0.75 * (rk + 1)) / returns.length) : dk >= 0 && desc ? desc.at((dk + 1) / descents.length) : ascent.at(u(i))
+      const time = until ? `${formatOffset(e.offsetSec)}–${formatOffset(until.offsetSec).slice(2)}` : formatOffset(e.offsetSec)
+      // WHY: return labels go under the leg where the frame is empty; the landing sits on the ground, so its label goes right.
+      const prefer: Anchor[] | undefined =
+        i === liftoff ? ['right']
+        : cfg.return ? (rk === returns.length - 1 ? ['right', 'above', 'left'] : ['below', 'right', 'above', 'left'])
+        : dk >= 0 ? (dk === descents.length - 1 ? ['left', 'above', 'above-far'] : dk % 2 ? ['left', 'right', 'above'] : ['right', 'left', 'below'])
+        : undefined
+      return { i, last: until ? events.indexOf(until) : i, e, time, cfg, pos, w: Math.max(e.abbrev.length, time.length) * 7 + 4, h: 24, prefer }
     })
     const pad = ascent.at(0)
     const reserved = [
@@ -89,7 +104,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
       ...markers.map((m) => ({ x: m.pos.x - 26, y: m.pos.y - 26, w: 52, h: 52 })), // silhouettes
     ]
     const labels = placeLabels(markers.map((m) => ({ x: m.pos.x, y: m.pos.y, w: m.w, h: m.h, prefer: m.prefer })), { w: W, h: H }, reserved)
-    return { ascent, ret, markers: markers.map((m, k) => ({ ...m, label: labels[k]! })), liftoff }
+    return { ascent, ret, desc, markers: markers.map((m, k) => ({ ...m, label: labels[k]! })), liftoff }
   }, [events, W, flags])
 
   // The viewBox width follows the container's aspect so the diagram fills it edge to edge at every size.
@@ -124,7 +139,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
     const flames = [q('.flame1'), q('.flame2'), ...all('.flame-b')]
     const flameDims = [{ w: w * 1.3, len: h * 0.7 }, { w: w * 0.8, len: h * 0.3 }, ...boosters.map((b) => ({ w: b.w * 1.1, len: b.h * 0.5 }))]
     const particles = flames.map((f) => Array.from(f?.querySelectorAll('.pt') ?? []) as SVGCircleElement[])
-    const { ascent } = profile
+    const { ascent, desc } = profile
     const noseH = nose.h
     const stage1H = stage1.h
     // WHY: fairing halves, payload and panels only exist for fairing vehicles; a capsule or Starship has none, so a missing part is a no-op.
@@ -132,7 +147,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
 
     const render = (pose: Pose) => {
       const { p, alt, deploy: d, t } = pose
-      const pt = ascent.at(p)
+      const pt = desc && pose.d > 0 ? desc.at(pose.d) : ascent.at(p)
       const shake = pose.shake * 2 * Math.sin(t * 91) // WHY: the Max-Q shiver is the one physical thing that beat can show
       set(rocket, 'transform', `translate(${(pt.x + shake).toFixed(2)} ${pt.y.toFixed(2)}) rotate(${pt.angle.toFixed(2)})`)
       set(trail, 'stroke-dashoffset', ascent.length * (1 - p))
@@ -189,7 +204,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
     }
   }, [profile, pose, renderRef, boosters, h, nose, stage1, w])
 
-  const { ascent, ret, markers } = profile
+  const { ascent, ret, desc, markers } = profile
   const pad = ascent.at(0)
   const showLabels = W >= 720 // ponytail: on a phone only the current event is labelled; the scrubber below names the rest
   const bandH = (sh: number) => Math.max(3, sh * 0.07)
@@ -225,6 +240,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
       {/* Trajectory: the whole ascent dashed (what will happen), the flown part solid in the live colour. */}
       <path d={ascent.d} fill="none" stroke={FG} strokeOpacity={0.35} strokeDasharray="3 5" />
       <path className="trail" d={ascent.d} fill="none" stroke="var(--live)" strokeWidth={1.5} strokeDasharray={ascent.length} strokeDashoffset={ascent.length} />
+      {desc ? <path d={desc.d} fill="none" stroke={FG} strokeOpacity={0.25} strokeDasharray="2 6" /> : null}
       {ret ? (
         <>
           <path d={ret.d} fill="none" stroke={FG} strokeOpacity={0.25} strokeDasharray="2 6" />
@@ -245,8 +261,8 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
       </g>
 
       {/* Milestones: a silhouette of the vehicle as it is at each event, a dot on the arc, and a label with a leader. */}
-      {markers.map(({ i, e, cfg, pos, label }) => {
-        const state = i < current ? 'past' : i === current ? 'current' : 'future'
+      {markers.map(({ i, last, e, time, cfg, pos, label }) => {
+        const state = last < current ? 'past' : i <= current && current <= last ? 'current' : 'future'
         const { box, anchor } = label
         const dx = box.x - pos.x
         const dy = box.y - pos.y
@@ -271,7 +287,7 @@ export function LaunchStage({ vehicle, events, current, pose, renderRef, label }
                   {e.abbrev}
                 </text>
                 <text x={tx} y={dy + 22} fontSize={9} textAnchor={anchor === 'right' ? 'start' : anchor === 'left' ? 'end' : 'middle'} fill={INK}>
-                  {formatOffset(e.offsetSec)}
+                  {time}
                 </text>
               </g>
             ) : null}

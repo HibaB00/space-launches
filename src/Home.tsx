@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Hero } from './Hero'
-import { LaunchList } from './LaunchList'
+import { LaunchList, RecentList } from './LaunchList'
 import { padsOf } from './launches'
 import { Panel } from './Panel'
 import type { LaunchFeed } from './useLaunches'
@@ -31,7 +31,7 @@ export class GlobeBoundary extends Component<{ children: ReactNode }, { failed: 
   }
 }
 
-export function Home({ feed, error, now }: { feed: LaunchFeed | null; error: string | null; now: number }) {
+export function Home({ feed, past, error, now }: { feed: LaunchFeed | null; past: LaunchFeed | null; error: string | null; now: number }) {
   const launches = feed?.launches
   const next = launches?.[0] ?? null
   // WHY (rerender-dependencies): memoised so the globe, which is React.memo, sees the same array each tick.
@@ -56,6 +56,7 @@ export function Home({ feed, error, now }: { feed: LaunchFeed | null; error: str
         </Panel>
       </div>
       {launches ? <LaunchList launches={launches} now={now} /> : null}
+      {past && past.launches.length > 0 ? <RecentList launches={past.launches.slice(0, 8)} /> : null}
     </>
   )
 }

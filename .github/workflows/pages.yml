@@ -11,9 +11,10 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
-# WHY: the deploy job needs to write Pages and mint an OIDC token; everything else stays read-only.
+# WHY: the deploy job needs to write Pages and mint an OIDC token; the build job commits the archive of flown
+# launches back to the repo (docs/adr/0009-archive-in-git.md), so it needs contents: write.
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -32,6 +33,15 @@ jobs:
       - run: bun test
       # WHY: a failed fetch exits non-zero and stops the job here, so the previous deployment stays live.
       - run: bun run fetch
+      # WHY: the archive lives in git. A commit made with GITHUB_TOKEN does not trigger workflows, so this cannot loop;
+      # the rebase absorbs a push that landed meanwhile. A failed archive commit must not block the deploy.
+      - name: Commit the archive of flown launches
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/past.json
+          git diff --cached --quiet || (git commit -m "Archive flown launches" && git pull --rebase && git push)
       - run: bun run build
       - uses: actions/upload-pages-artifact@v3
         with:

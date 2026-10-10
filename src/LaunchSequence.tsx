@@ -2,7 +2,7 @@ import { gsap } from 'gsap'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { countdownMode, formatOffset, GENERIC_TIMELINE, type Launch } from './launches'
+import { countdownMode, formatOffset, GENERIC_TIMELINE, isFlown, type Launch } from './launches'
 import { LaunchStage } from './LaunchStage'
 import { Panel } from './Panel'
 import { buildTimeline, POSE0, type Pose } from './pose'
@@ -116,7 +116,7 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
                 live · following the launch clock
               </span>
             ) : (
-              <span>preview · compressed time · not to scale · click an event to jump</span>
+              <span>{isFlown(launch) ? 'replay' : 'preview'} · compressed time · not to scale · click an event to jump</span>
             )}
           </div>
           <p className="whitespace-nowrap text-4xl sm:text-5xl">{formatOffset(clock)}</p>

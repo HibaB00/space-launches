@@ -10,6 +10,8 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **net_precision**: Launch Library 2's flag for how well the time is known: Second, Minute, Hour, Day, Week, Month, Quarter, Half, Year. We only tick a countdown for Hour or finer; coarser shows "NET <date>".
 - **Hold**: a pause in the countdown clock. **Built-in holds** are planned pauses (e.g. T-20 min) to absorb slack; an unplanned hold means a problem. **Scrub**: the attempt is cancelled for the day.
 - **Status vocabulary** (LL2): **Go** (T-0 confirmed by official or reliable sources), **TBC** (to be confirmed: date/time expected but awaiting official confirmation), **TBD** (to be determined: date is an estimate), **Hold**, **In Flight**, **Success**, **Failure**, **Partial Failure**.
+- **Flown**: a launch whose status is terminal (Success, Failure, Partial Failure). Shown with its **outcome** instead of a countdown, and kept in the **archive** (`data/past.json`, ADR-0009) so its page and calendar links keep working.
+- **Landing outcome**: LL2 records `attempt` and `success` per booster; an expended core has a landing record with `attempt: false` (location "ATL", the Atlantic), which we do not call a landing.
 
 ## Places
 
@@ -39,7 +41,9 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Engine restart**: upper stages often burn twice (SES-1 → SECO-1, coast, SES-2 → SECO-2) to raise an orbit or leave Earth; H3's MMX flight coasts for an hour between burns.
 - **Ordinal timeline**: events drawn with equal spacing regardless of the time between them, as SpaceX's webcast bar does; a linear axis would squash 8 minutes of flight against 38 minutes of countdown.
 - **Gravity turn**: the shape of an ascent: vertical off the pad, a small pitch-over, then gravity bends the path toward horizontal while thrust stays along the velocity vector; by MECO the vehicle is moving mostly sideways. Our arc has this shape but is not a trajectory.
-- **Flight profile**: the side-view infographic of a mission (SpaceX's launch pages): the ascent arc with the vehicle drawn at each milestone, labelled, plus the booster's **return leg** (entry burn, landing burn, landing) for reusable first stages.
+- **Flight profile**: the side-view infographic of a mission (SpaceX's launch pages): the ascent arc with the vehicle drawn at each milestone, labelled, plus the booster's **return leg** (entry burn, landing burn, landing) for reusable first stages, and a **descent leg** for an upper stage that comes back (Starship's belly-flop and landing, Dragon's re-entry). Rule of thumb used by the code: a landing *before* SECO is the booster's, a landing *after* it is the upper stage's, because a booster is always down before the second stage finishes burning.
+- **Burn pair**: providers publish a burn as two events (startup, shutdown). The profile draws one marker with both times, as SpaceX does; the scrubber keeps both.
+- **Boostback burn**: a reusable booster flips after separation and burns against its velocity to head back toward the launch site (RTLS, return to launch site). Without it the booster continues downrange to a droneship. On Falcon 9 the boostback brackets the fairing separation in time.
 
 ## Vehicle
 

@@ -3,6 +3,7 @@
 // WHY: tweening numbers instead of meshes lets the timeline build before three.js has loaded, and lets bun test the beats.
 import { gsap } from 'gsap'
 import type { TimelineEvent } from './launches'
+import { ascentIndices, ascentU, descentIndices, descentU } from './profile'
 import { classifyEvent } from './sequence'
 
 export type Pose = {
@@ -22,9 +23,11 @@ export type Pose = {
   stageSep: number
   fairing: number
   deploy: number
+  /** progress along the upper stage's descent leg (Starship, Dragon), 0 until its first descent event */
+  d: number
 }
 
-export const POSE0: Pose = { t: 0, throttle1: 0, throttle2: 0, throttleB: 0, lift: 0, p: 0, alt: 0, shake: 0, boosterSep: 0, stageSep: 0, fairing: 0, deploy: 0 }
+export const POSE0: Pose = { t: 0, throttle1: 0, throttle2: 0, throttleB: 0, lift: 0, p: 0, alt: 0, shake: 0, boosterSep: 0, stageSep: 0, fairing: 0, deploy: 0, d: 0 }
 
 /**
  * One paused, looping timeline with a beat per event at its compressed time (`times`). Beats that a timeline may not
@@ -73,10 +76,22 @@ export function buildTimeline(events: TimelineEvent[], times: number[], pose: Po
       case 'liftoff':
         light(t)
         tl.to(pose, { lift: 1, duration: 2.6, ease: 'power1.out' }, t)
-        // WHY: `p` is linear because the profile's markers are spaced by flight ordinal and every flight step plays for
-        // the same 2.4 s, so a linear p puts the vehicle on each marker exactly at its event. `alt` eases out so the
-        // sky darkens early, where the change is visible.
-        tl.to(pose, { p: 1, duration: flight, ease: 'none' }, t)
+        // WHY: `p` is the position along the ascent arc, tweened linearly from one ascent event to the next, so the
+        // vehicle sits on each marker exactly at its event. Return events (boostback, entry burn, landing) take their
+        // time without moving it. `alt` eases out so the sky darkens early, where the change is visible.
+        {
+          const asc = ascentIndices(events, i)
+          for (let k = 1; k < asc.length; k++) {
+            const from = times[asc[k - 1]!]!
+            tl.to(pose, { p: ascentU(events, i, asc[k]!), duration: Math.max(0.01, times[asc[k]!]! - from), ease: 'none' }, from)
+          }
+          const des = descentIndices(events)
+          const way = [asc[asc.length - 1] ?? i, ...des]
+          for (let k = 1; k < way.length; k++) {
+            const from = times[way[k - 1]!]!
+            tl.to(pose, { d: descentU(events, i, way[k]!), duration: Math.max(0.01, times[way[k]!]! - from), ease: 'none' }, from)
+          }
+        }
         tl.to(pose, { alt: 1, duration: flight, ease: 'power1.out' }, t)
         break
       case 'maxq':

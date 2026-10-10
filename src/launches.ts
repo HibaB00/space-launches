@@ -47,6 +47,8 @@ export type LL2Launch = {
           launcher_flight_number: number | null
           launcher: { serial_number: string | null } | null
           landing: {
+            attempt?: boolean | null
+            success?: boolean | null
             description: string | null
             downrange_distance: number | null
             landing_location: { name: string; abbrev: string | null } | null
@@ -118,7 +120,8 @@ export type Vehicle = {
   costUsd: number | null
   record: { total: number; success: number; failed: number; streak: number; landingsAttempted: number; landingsSuccess: number }
   /** Cores and strap-on boosters flying on this launch, with their own history and landing plan. */
-  boosters: { type: string; serial: string; flightNumber: number | null; reused: boolean; landing: { description: string; location: string; downrangeKm: number | null } | null }[]
+  /** `landing` is null when no landing is attempted (expended); `success` is null until the launch has flown. */
+  boosters: { type: string; serial: string; flightNumber: number | null; reused: boolean; landing: { description: string; location: string; downrangeKm: number | null; success: boolean | null } | null }[]
   /** Crewed or cargo capsule on top, when there is one instead of a fairing. */
   spacecraft: { name: string; config: string; destination: string; crew: number } | null
 }
@@ -228,11 +231,14 @@ function toVehicle(rocket: LL2Launch['rocket']): Vehicle {
       serial: s.launcher?.serial_number ?? '',
       flightNumber: s.launcher_flight_number ?? null,
       reused: s.reused ?? false,
-      landing: s.landing
+      // WHY: LL2 attaches a landing record even to an expended core (attempt: false, location 'ATL' for the Atlantic);
+      // only an attempted landing is a landing.
+      landing: s.landing && s.landing.attempt !== false
         ? {
             description: s.landing.description ?? '',
             location: s.landing.landing_location?.abbrev ?? s.landing.landing_location?.name ?? '',
             downrangeKm: s.landing.downrange_distance ?? null,
+            success: s.landing.success ?? null,
           }
         : null,
     })),
@@ -321,6 +327,11 @@ export const GENERIC_TIMELINE: TimelineEvent[] = [
 ]
 
 const shortCountry = (name: string) => SHORT_COUNTRY[name] ?? name
+
+// WHY: LL2's terminal statuses. A flown launch keeps its record (status, mission log, landing outcome) in the archive
+// (docs/adr/0009-archive-in-git.md) and its page keeps working after the launch, so calendar links never 404.
+const FLOWN = new Set(['Success', 'Failure', 'Partial Failure'])
+export const isFlown = (launch: Pick<Launch, 'status'>) => FLOWN.has(launch.status.abbrev)
 
 export type CountdownMode = 'tick' | 'tplus' | 'net-date' | 'hold'
 
