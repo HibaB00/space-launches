@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Hero } from './Hero'
 import { LaunchList } from './LaunchList'
 import { padsOf } from './launches'
@@ -11,6 +11,24 @@ const Globe = lazy(() => import('./Globe').then((m) => ({ default: m.Globe })))
 
 export function GlobeFallback() {
   return <div aria-hidden="true" className="h-full w-full animate-pulse bg-[radial-gradient(circle_at_center,var(--border)_0,transparent_60%)] motion-reduce:animate-none" />
+}
+
+// WHY: three.js throws from inside an effect when WebGL is unavailable (old GPUs, some remote desktops, headless
+// browsers). Without a boundary React unmounts the whole tree and the countdown vanishes with the globe.
+export class GlobeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    if (this.state.failed)
+      return (
+        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_center,var(--border)_0,transparent_60%)] p-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+          globe needs WebGL · not available in this browser
+        </div>
+      )
+    return this.props.children
+  }
 }
 
 export function Home({ feed, error, now }: { feed: LaunchFeed | null; error: string | null; now: number }) {
@@ -29,9 +47,11 @@ export function Home({ feed, error, now }: { feed: LaunchFeed | null; error: str
         )}
         <Panel label={`Launch sites · next ${pads.length}`} live className="h-[24rem] xl:h-auto" bodyClassName="relative">
           <div className="absolute inset-0">
-            <Suspense fallback={<GlobeFallback />}>
-              <Globe pads={pads} focusId={next?.id ?? null} className="h-full w-full" />
-            </Suspense>
+            <GlobeBoundary>
+              <Suspense fallback={<GlobeFallback />}>
+                <Globe pads={pads} focusId={next?.id ?? null} className="h-full w-full" />
+              </Suspense>
+            </GlobeBoundary>
           </div>
         </Panel>
       </div>

@@ -17,7 +17,7 @@ export function LaunchList({ launches, now }: { launches: Launch[]; now: number 
         }
       >
         {/* WHY: gap-px over a border-coloured background draws hairlines between tiles without doubled borders. */}
-        <ul className="grid gap-px bg-border md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-px bg-border md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {launches.map((launch) => (
             <li key={launch.id} className="bg-card">
               <LaunchCard launch={launch} now={now} />

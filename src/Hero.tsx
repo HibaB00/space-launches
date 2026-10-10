@@ -25,7 +25,7 @@ export function Hero({ launch, now }: { launch: Launch; now: number }) {
           <StatusBadge status={launch.status} />
           {launch.netPrecision === 'HR' && mode === 'tick' ? <span className="normal-case tracking-normal">±1{' '}h · T-0 known to the hour</span> : null}
         </p>
-        <p className="whitespace-nowrap text-4xl sm:text-5xl xl:text-6xl">
+        <p className="whitespace-nowrap text-3xl sm:text-5xl xl:text-6xl">
           {countdownText(launch, now)}
           <span className="cursor" aria-hidden="true">
             ▌

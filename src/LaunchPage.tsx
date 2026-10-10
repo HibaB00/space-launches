@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { GlobeFallback } from './Home'
+import { GlobeBoundary, GlobeFallback } from './Home'
 import { googleCalendarUrl, launchIcs } from './ics'
 import { countdownMode, countdownText, formatNet, padsOf, siteName, youtubeEmbedUrl } from './launches'
 import { LaunchSequence } from './LaunchSequence'
@@ -59,7 +59,7 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
           <h1 className="text-2xl text-pretty sm:text-3xl" translate="no">
             {launch.rocket} <span className="text-muted-foreground">·</span> {launch.mission.name}
           </h1>
-          <p className="whitespace-nowrap text-4xl sm:text-5xl md:text-6xl">
+          <p className="whitespace-nowrap text-3xl sm:text-5xl md:text-6xl">
             {countdownText(launch, now)}
             <span className="cursor" aria-hidden="true">
               ▌
@@ -175,9 +175,11 @@ export function LaunchPage({ feed, now }: { feed: LaunchFeed | null; now: number
         </div>
         <Panel label="Launch site" bodyClassName="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-1">
           <div className="aspect-[4/3] border border-border">
-            <Suspense fallback={<GlobeFallback />}>
-              <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
-            </Suspense>
+            <GlobeBoundary>
+              <Suspense fallback={<GlobeFallback />}>
+                <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
+              </Suspense>
+            </GlobeBoundary>
           </div>
           <div className="space-y-4">
             <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
