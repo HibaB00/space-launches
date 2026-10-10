@@ -28,7 +28,8 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 
 - **Inclination**: the angle between the orbital plane and the equator. A launch site can only reach inclinations ≥ its own latitude without a costly plane change, so equatorial sites (Kourou, 5°N) are prized and ISS flies at 51.6° to be reachable from Baikonur (46°N).
 - **Prograde / retrograde**: with or against Earth's rotation. Prograde launches head east (north-east from the Cape); **SSO** is slightly retrograde (~97.5°) so its plane precesses once a year, which is why SSO flights head south from Vandenberg, Jiuquan and Mahia.
-- **Launch azimuth**: the compass heading at liftoff; set by the target inclination and the pad latitude.
+- **Launch azimuth**: the compass heading at liftoff; set by the target inclination and the pad latitude: sin(az) = cos(i) / cos(lat). ISS (51.6°) from the Cape (28.5°N) gives 45°, north-east. For polar and retrograde orbits the southbound solution (180° − az) is flown so the rocket heads over open water. Drawn on the globe as a short line from the pad, labelled illustrative.
+- **Terminator**: the day/night line, a great circle 90° from the **subsolar point** (where the sun is overhead). Its longitude comes from UTC time and the **equation of time** (the sundial's drift of up to ±16 minutes through the year); its tilt from the sun's declination (±23.44°). Drawn on the globe, refreshed every minute.
 - **Insertion**: the moment the vehicle reaches orbital velocity; we draw it 30° downrange, roughly where real upper stages cut off.
 - **GTO → GEO**: the rocket leaves the satellite in an ellipse (perigee low, apogee at 35,786 km); the satellite's own engine circularises at apogee.
 

@@ -4,6 +4,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { GlobeBoundary, GlobeFallback } from './Home'
+import { compass, inclinationFor, launchAzimuth } from './geo'
 import { googleCalendarUrl, launchIcs } from './ics'
 import { countdownMode, countdownText, formatNet, isFlown, padsOf, siteName, tabTitle, youtubeEmbedUrl } from './launches'
 import { LaunchSequence } from './LaunchSequence'
@@ -23,6 +24,14 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
   const launch = feed?.launches.find((l) => l.id === id) ?? past?.launches.find((l) => l.id === id) ?? null
   // Hooks run unconditionally; the early returns come after.
   const pads = useMemo(() => (launch ? padsOf([launch]) : []), [launch])
+  // WHY: illustrative heading from the orbit's inclination and the pad's latitude (geo.ts), the "why does Vandenberg fly
+  // south" lesson drawn on the globe. Memoised so the globe (React.memo) sees the same object each tick.
+  const heading = useMemo(() => {
+    if (!launch || launch.pad.lat === null || launch.pad.lon === null) return null
+    const inclination = inclinationFor(launch.mission.orbitAbbrev, launch.pad.lat)
+    const bearingDeg = launchAzimuth(launch.pad.lat, inclination)
+    return { track: { lat: launch.pad.lat, lon: launch.pad.lon, bearingDeg }, inclination, bearingDeg }
+  }, [launch])
   // WHY: stamped with fetchedAt, not `now`, so the calendar URLs are stable and not rebuilt every second.
   const calendar = useMemo(
     () =>
@@ -156,7 +165,7 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
             <div className="absolute inset-0">
               <GlobeBoundary>
                 <Suspense fallback={<GlobeFallback />}>
-                  <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
+                  <Globe pads={pads} focusId={launch.id} track={heading?.track} className="h-full w-full" />
                 </Suspense>
               </GlobeBoundary>
             </div>
@@ -177,6 +186,12 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
                   open ↗
                 </a>
               </Fact>
+              {heading ? (
+                <Fact label="Heading">
+                  {compass(heading.bearingDeg)} · {Math.round(heading.bearingDeg)}°
+                  <span className="text-muted-foreground"> · for a {heading.inclination}° orbit from {Math.abs(launch.pad.lat!).toFixed(1)}°{launch.pad.lat! < 0 ? 'S' : 'N'} · illustrative</span>
+                </Fact>
+              ) : null}
             </dl>
             <div className="grid grid-cols-3 gap-px bg-border">
               <Tile value={launch.attempt.orbitalYear} label={`orbital launch of ${year}`} />
