@@ -21,16 +21,13 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import land from 'world-atlas/land-110m.json'
 import landDots from './land-dots.json'
-import { coastlineSegments, graticuleSegments, latLonToVec3, trackSegments, type Topology } from './geo'
+import { coastlineSegments, graticuleSegments, latLonToVec3, type Topology } from './geo'
 
 export type GlobePad = { id: string; lat: number; lon: number }
-/** The first stretch of a launch's ground track from its pad: illustrative, from the orbit's inclination (see geo.ts). */
-export type GlobeTrack = { lat: number; lon: number; bearingDeg: number }
 
 type Props = {
   pads: GlobePad[]
   focusId: string | null
-  track?: GlobeTrack | null
   className?: string
 }
 
@@ -58,7 +55,6 @@ type Rig = {
   padsGeometry: BufferGeometry
   marker: Mesh<SphereGeometry, MeshBasicMaterial>
   ring: Mesh
-  track: LineSegments
   targetPos: Vector3 | null
 }
 
@@ -75,7 +71,7 @@ function disposeObject(obj: Mesh | LineSegments | Points) {
   else m.dispose()
 }
 
-export const Globe = memo(function Globe({ pads, focusId, track = null, className }: Props) {
+export const Globe = memo(function Globe({ pads, focusId, className }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const rig = useRef<Rig | null>(null)
 
@@ -114,11 +110,8 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
     const marker = new Mesh(new SphereGeometry(0.02, 12, 8), new MeshBasicMaterial({ color: 0xa8d8f0, transparent: true }))
     const ring = new Mesh(new RingGeometry(0.05, 0.058, 32), new MeshBasicMaterial({ color: 0xa8d8f0, side: DoubleSide, transparent: true, opacity: 0.9 }))
     marker.visible = ring.visible = false
-    const track = lineSegments(new Float32Array(0), 0xa8d8f0, 0.9)
-    track.visible = false
-
-    scene.add(occluder, grid, coast, landPoints, padPoints, marker, ring, track)
-    const r: Rig = { renderer, camera, scene, controls, padsGeometry, marker, ring, track, targetPos: null }
+    scene.add(occluder, grid, coast, landPoints, padPoints, marker, ring)
+    const r: Rig = { renderer, camera, scene, controls, padsGeometry, marker, ring, targetPos: null }
     rig.current = r
 
     const resize = () => {
@@ -151,7 +144,7 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
       cancelAnimationFrame(raf)
       observer.disconnect()
       controls.dispose()
-      for (const o of [occluder, grid, coast, landPoints, padPoints, marker, ring, track]) disposeObject(o)
+      for (const o of [occluder, grid, coast, landPoints, padPoints, marker, ring]) disposeObject(o)
       renderer.dispose()
       el.removeChild(renderer.domElement)
       rig.current = null
@@ -187,13 +180,5 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
     r.targetPos = v.clone().normalize().add(new Vector3(0, 0.25, 0)).normalize().multiplyScalar(CAMERA_DISTANCE)
   }, [pads, focusId])
 
-  // Track → a short line leaving the pad on its launch azimuth.
-  useEffect(() => {
-    const r = rig.current
-    if (!r) return
-    r.track.visible = !!track
-    if (track) r.track.geometry.setAttribute('position', new Float32BufferAttribute(trackSegments(track.lat, track.lon, track.bearingDeg, 14, 1.006), 3))
-  }, [track])
-
-  return <div ref={host} role="img" aria-label="Globe showing launch sites and the launch heading" className={`${className ?? ''} [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full`} />
+  return <div ref={host} role="img" aria-label="Globe showing launch sites" className={`${className ?? ''} [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full`} />
 })

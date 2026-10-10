@@ -24,13 +24,12 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
   const launch = feed?.launches.find((l) => l.id === id) ?? past?.launches.find((l) => l.id === id) ?? null
   // Hooks run unconditionally; the early returns come after.
   const pads = useMemo(() => (launch ? padsOf([launch]) : []), [launch])
-  // WHY: illustrative heading from the orbit's inclination and the pad's latitude (geo.ts), the "why does Vandenberg fly
-  // south" lesson drawn on the globe. Memoised so the globe (React.memo) sees the same object each tick.
+  // WHY: illustrative heading from the orbit's inclination and the pad's latitude (geo.ts): the "why does Vandenberg fly
+  // south" lesson, stated as a fact in the site panel.
   const heading = useMemo(() => {
-    if (!launch || launch.pad.lat === null || launch.pad.lon === null) return null
+    if (!launch || launch.pad.lat === null) return null
     const inclination = inclinationFor(launch.mission.orbitAbbrev, launch.pad.lat)
-    const bearingDeg = launchAzimuth(launch.pad.lat, inclination)
-    return { track: { lat: launch.pad.lat, lon: launch.pad.lon, bearingDeg }, inclination, bearingDeg }
+    return { inclination, bearingDeg: launchAzimuth(launch.pad.lat, inclination) }
   }, [launch])
   // WHY: stamped with fetchedAt, not `now`, so the calendar URLs are stable and not rebuilt every second.
   const calendar = useMemo(
@@ -165,7 +164,7 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
             <div className="absolute inset-0">
               <GlobeBoundary>
                 <Suspense fallback={<GlobeFallback />}>
-                  <Globe pads={pads} focusId={launch.id} track={heading?.track} className="h-full w-full" />
+                  <Globe pads={pads} focusId={launch.id} className="h-full w-full" />
                 </Suspense>
               </GlobeBoundary>
             </div>

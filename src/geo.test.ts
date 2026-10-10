@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import land from 'world-atlas/land-110m.json'
-import { coastlineSegments, compass, destination, graticuleSegments, inclinationFor, latLonToVec3, launchAzimuth, length, trackSegments, type Topology } from './geo'
+import { coastlineSegments, compass, graticuleSegments, inclinationFor, latLonToVec3, launchAzimuth, length, type Topology } from './geo'
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps
 const CAPE = { lat: 28.56, lon: -80.58 }
@@ -55,13 +55,5 @@ describe('launch azimuth', () => {
     expect(launchAzimuth(28.5, 28.5)).toBeCloseTo(90, 5)
     expect(inclinationFor('LEO', 46)).toBe(46) // Baikonur can't go lower than its own latitude
     expect(inclinationFor('PO', 5)).toBe(90)
-  })
-  test('destination: 90° due east from the equator lands on the equator 90° east; the track leaves the pad', () => {
-    const d = destination(0, 0, 90, 90)
-    expect(d.lat).toBeCloseTo(0, 5)
-    expect(d.lon).toBeCloseTo(90, 5)
-    const t = trackSegments(28.5, -80.6, 45, 14, 1, 4)
-    expect(t).toHaveLength(24)
-    expect(Math.hypot(t[0]! - t[21]!, t[1]! - t[22]!, t[2]! - t[23]!)).toBeGreaterThan(0.2)
   })
 })

@@ -91,28 +91,3 @@ export function compass(headingDeg: number): string {
   const names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
   return names[Math.round((((headingDeg % 360) + 360) % 360) / 45) % 8]!
 }
-
-/** The point `distDeg` of arc along a great circle from (lat, lon) on `bearingDeg`. Standard destination formula. */
-export function destination(lat: number, lon: number, bearingDeg: number, distDeg: number): { lat: number; lon: number } {
-  const la = lat * D2R
-  const lo = lon * D2R
-  const br = bearingDeg * D2R
-  const dd = distDeg * D2R
-  const la2 = Math.asin(Math.sin(la) * Math.cos(dd) + Math.cos(la) * Math.sin(dd) * Math.cos(br))
-  const lo2 = lo + Math.atan2(Math.sin(br) * Math.sin(dd) * Math.cos(la), Math.cos(dd) - Math.sin(la) * Math.sin(la2))
-  return { lat: la2 / D2R, lon: ((lo2 / D2R + 540) % 360) - 180 }
-}
-
-/** The first `distDeg` of a launch track from the pad as line segments on a sphere of radius r. */
-export function trackSegments(lat: number, lon: number, bearingDeg: number, distDeg = 14, r = 1, steps = 16): Float32Array {
-  const out = new Float32Array(steps * 6)
-  let prev = latLonToVec3(lat, lon, r)
-  for (let k = 1; k <= steps; k++) {
-    const p = destination(lat, lon, bearingDeg, (distDeg * k) / steps)
-    const v = latLonToVec3(p.lat, p.lon, r)
-    out.set(prev, (k - 1) * 6)
-    out.set(v, (k - 1) * 6 + 3)
-    prev = v
-  }
-  return out
-}

@@ -1,7 +1,6 @@
 import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Hero } from './Hero'
 import { LaunchList, RecentList } from './LaunchList'
-import { inclinationFor, launchAzimuth } from './geo'
 import { padsOf, tabTitle } from './launches'
 import { Panel } from './Panel'
 import type { LaunchFeed } from './useLaunches'
@@ -37,10 +36,6 @@ export function Home({ feed, past, error, now }: { feed: LaunchFeed | null; past
   const next = launches?.[0] ?? null
   // WHY (rerender-dependencies): memoised so the globe, which is React.memo, sees the same array each tick.
   const pads = useMemo(() => padsOf(launches ?? []), [launches])
-  const track = useMemo(
-    () => (next && next.pad.lat !== null && next.pad.lon !== null ? { lat: next.pad.lat, lon: next.pad.lon, bearingDeg: launchAzimuth(next.pad.lat, inclinationFor(next.mission.orbitAbbrev, next.pad.lat)) } : null),
-    [next],
-  )
   return (
     <>
       <title>{next ? tabTitle(next, now) : 'Space Launches · next 20 orbital launches'}</title>
@@ -50,11 +45,11 @@ export function Home({ feed, past, error, now }: { feed: LaunchFeed | null; past
         ) : (
           <p className="text-muted-foreground">{error ? `Could not load launches (${error}). Reload the page to retry.` : 'Loading launches…'}</p>
         )}
-        <Panel label={`Launch sites · next ${pads.length}`} actions={<span>heading of the next launch</span>} live className="h-[24rem] xl:h-auto" bodyClassName="relative">
+        <Panel label={`Launch sites · next ${pads.length}`} live className="h-[24rem] xl:h-auto" bodyClassName="relative">
           <div className="absolute inset-0">
             <GlobeBoundary>
               <Suspense fallback={<GlobeFallback />}>
-                <Globe pads={pads} focusId={next?.id ?? null} track={track} className="h-full w-full" />
+                <Globe pads={pads} focusId={next?.id ?? null} className="h-full w-full" />
               </Suspense>
             </GlobeBoundary>
           </div>
