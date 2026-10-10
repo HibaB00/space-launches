@@ -105,8 +105,10 @@ function LaunchCard({ launch, now, day }: { launch: Launch; now: number; day: st
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-start justify-between gap-3">
           <p className="text-base whitespace-nowrap sm:text-lg">{countdownText(launch, now)}</p>
+          {/* WHY: the day tag hides under sm: countdown + tag + badge is wider than a 390 px card, and the card's date line
+              already says the day on a phone. */}
           <span className="flex shrink-0 items-center gap-2">
-            {day.startsWith('NET') ? null : <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{day}</span>}
+            {day.startsWith('NET') ? null : <span className="hidden text-[10px] uppercase tracking-widest text-muted-foreground sm:inline">{day}</span>}
             <StatusBadge status={launch.status} />
           </span>
         </div>
