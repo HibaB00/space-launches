@@ -50,7 +50,7 @@ export function Home({ feed, past, error, now }: { feed: LaunchFeed | null; past
         ) : (
           <p className="text-muted-foreground">{error ? `Could not load launches (${error}). Reload the page to retry.` : 'Loading launches…'}</p>
         )}
-        <Panel label={`Launch sites · next ${pads.length}`} actions={<span>day/night line · heading of the next launch</span>} live className="h-[24rem] xl:h-auto" bodyClassName="relative">
+        <Panel label={`Launch sites · next ${pads.length}`} actions={<span>heading of the next launch</span>} live className="h-[24rem] xl:h-auto" bodyClassName="relative">
           <div className="absolute inset-0">
             <GlobeBoundary>
               <Suspense fallback={<GlobeFallback />}>

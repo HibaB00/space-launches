@@ -21,7 +21,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import land from 'world-atlas/land-110m.json'
 import landDots from './land-dots.json'
-import { coastlineSegments, graticuleSegments, latLonToVec3, subsolarPoint, terminatorSegments, trackSegments, type Topology } from './geo'
+import { coastlineSegments, graticuleSegments, latLonToVec3, trackSegments, type Topology } from './geo'
 
 export type GlobePad = { id: string; lat: number; lon: number }
 /** The first stretch of a launch's ground track from its pad: illustrative, from the orbit's inclination (see geo.ts). */
@@ -58,7 +58,6 @@ type Rig = {
   padsGeometry: BufferGeometry
   marker: Mesh<SphereGeometry, MeshBasicMaterial>
   ring: Mesh
-  terminator: LineSegments
   track: LineSegments
   targetPos: Vector3 | null
 }
@@ -115,20 +114,12 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
     const marker = new Mesh(new SphereGeometry(0.02, 12, 8), new MeshBasicMaterial({ color: 0xa8d8f0, transparent: true }))
     const ring = new Mesh(new RingGeometry(0.05, 0.058, 32), new MeshBasicMaterial({ color: 0xa8d8f0, side: DoubleSide, transparent: true, opacity: 0.9 }))
     marker.visible = ring.visible = false
-    // WHY: the day/night line, redrawn each minute from the sun's position (geo.ts). The one thing on the globe that is
-    // live without any launch data, and the reason launch windows are quoted in UTC.
-    const sun = subsolarPoint(Date.now())
-    const terminator = lineSegments(terminatorSegments(sun.lat, sun.lon, 1.004), 0xe8c170, 0.55)
     const track = lineSegments(new Float32Array(0), 0xa8d8f0, 0.9)
     track.visible = false
 
-    scene.add(occluder, grid, coast, landPoints, padPoints, marker, ring, terminator, track)
-    const r: Rig = { renderer, camera, scene, controls, padsGeometry, marker, ring, terminator, track, targetPos: null }
+    scene.add(occluder, grid, coast, landPoints, padPoints, marker, ring, track)
+    const r: Rig = { renderer, camera, scene, controls, padsGeometry, marker, ring, track, targetPos: null }
     rig.current = r
-    const sunTimer = setInterval(() => {
-      const s = subsolarPoint(Date.now())
-      terminator.geometry.setAttribute('position', new Float32BufferAttribute(terminatorSegments(s.lat, s.lon, 1.004), 3))
-    }, 60_000)
 
     const resize = () => {
       const w = el.clientWidth || 1
@@ -158,10 +149,9 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
 
     return () => {
       cancelAnimationFrame(raf)
-      clearInterval(sunTimer)
       observer.disconnect()
       controls.dispose()
-      for (const o of [occluder, grid, coast, landPoints, padPoints, marker, ring, terminator, track]) disposeObject(o)
+      for (const o of [occluder, grid, coast, landPoints, padPoints, marker, ring, track]) disposeObject(o)
       renderer.dispose()
       el.removeChild(renderer.domElement)
       rig.current = null
@@ -205,5 +195,5 @@ export const Globe = memo(function Globe({ pads, focusId, track = null, classNam
     if (track) r.track.geometry.setAttribute('position', new Float32BufferAttribute(trackSegments(track.lat, track.lon, track.bearingDeg, 14, 1.006), 3))
   }, [track])
 
-  return <div ref={host} role="img" aria-label="Globe showing launch sites, the day/night line and the launch heading" className={`${className ?? ''} [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full`} />
+  return <div ref={host} role="img" aria-label="Globe showing launch sites and the launch heading" className={`${className ?? ''} [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full`} />
 })
