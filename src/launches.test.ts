@@ -8,7 +8,9 @@ import {
   countdownText,
   countdownMode,
   formatCountdown,
+  formatCountdownShort,
   formatNet,
+  tabTitle,
   toLaunch,
   type LL2Launch,
   type Launch,
@@ -234,5 +236,15 @@ describe('siteName / youtubeEmbedUrl', () => {
     expect(youtubeEmbedUrl('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
     expect(youtubeEmbedUrl('https://plus.nasa.gov/scheduled-video/x/')).toBeNull()
     expect(youtubeEmbedUrl(null)).toBeNull()
+  })
+})
+
+describe('formatCountdownShort / tabTitle', () => {
+  test('hours:minutes:seconds under a day, days beyond, T+ when past', () => {
+    expect(formatCountdownShort(6 * HOUR + 52 * 60_000 + 48_000)).toBe('T-06:52:48')
+    expect(formatCountdownShort(2 * DAY + 6 * HOUR + 52 * 60_000)).toBe('T-2d 06:52')
+    expect(formatCountdownShort(-61_000)).toBe('T+00:01:01')
+    const l = byName('Progress MS-35')
+    expect(tabTitle(l, Date.parse(l.net) - HOUR)).toMatch(/^T-01:00:00 · Soyuz 2.1b · /)
   })
 })

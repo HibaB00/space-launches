@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { GlobeBoundary, GlobeFallback } from './Home'
 import { googleCalendarUrl, launchIcs } from './ics'
-import { countdownMode, countdownText, formatNet, isFlown, padsOf, siteName, youtubeEmbedUrl } from './launches'
+import { countdownMode, countdownText, formatNet, isFlown, padsOf, siteName, tabTitle, youtubeEmbedUrl } from './launches'
 import { LaunchSequence } from './LaunchSequence'
 import { LaunchList } from './LaunchList'
 import { Panel } from './Panel'
@@ -45,7 +45,7 @@ export function LaunchPage({ feed, past, now }: { feed: LaunchFeed | null; past:
 
   return (
     <article className="space-y-4">
-      <title>{`${launch.rocket} · ${launch.mission.name} · Space Launches`}</title>
+      <title>{flown ? `${launch.status.abbrev} · ${launch.rocket} · ${launch.mission.name}` : tabTitle(launch, now)}</title>
       <Link to="/" className="inline-block text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">
         ← All launches
       </Link>

@@ -356,6 +356,24 @@ export function formatCountdown(remainingMs: number): string {
   return `${sign}${pad2(d)}d ${pad2(h)}h ${pad2(m)}m ${pad2(s)}s`
 }
 
+/** `T-06:52:48` under a day, `T-2d 06:52` beyond: short enough for a browser tab. */
+export function formatCountdownShort(remainingMs: number): string {
+  const sign = remainingMs < 0 ? 'T+' : 'T-'
+  const total = Math.floor(Math.abs(remainingMs) / 1000)
+  const d = Math.floor(total / 86_400)
+  const h = Math.floor((total % 86_400) / 3_600)
+  const m = Math.floor((total % 3_600) / 60)
+  const s = total % 60
+  return d > 0 ? `${sign}${d}d ${pad2(h)}:${pad2(m)}` : `${sign}${pad2(h)}:${pad2(m)}:${pad2(s)}`
+}
+
+/** What the browser tab shows: a ticking clock for a timed launch, the NET otherwise. WHY: a background tab is a countdown too. */
+export function tabTitle(launch: Launch, now: number): string {
+  const mode = countdownMode(launch, now)
+  const clock = mode === 'tick' || mode === 'tplus' ? formatCountdownShort(Date.parse(launch.net) - now) : mode === 'hold' ? 'HOLD' : formatNet(launch)
+  return `${clock} · ${launch.rocket} · ${launch.mission.name}`
+}
+
 // WHY: hardcoded month names instead of Intl: month abbreviations differ between ICU versions
 // ("Sep" vs "Sept"), which would make this output environment-dependent.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

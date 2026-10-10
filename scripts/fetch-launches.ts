@@ -3,6 +3,7 @@
 import { mergeArchive } from '../src/archive.ts'
 import { feedIcs } from '../src/ics.ts'
 import { toLaunch, type LL2Launch } from '../src/launches.ts'
+import { SITE_URL } from '../src/site.ts'
 
 // WHY: mode=detailed is the only mode that carries webcast links; hide_recent_previous drops launches
 // from the last 24 h that the endpoint otherwise includes "for convenience".
@@ -37,11 +38,16 @@ console.log(`wrote ${launches.length} launches to ${OUT.pathname} (${(JSON.strin
 
 const previous = (await fetchLaunches(PREVIOUS)).map(toLaunch)
 const archiveFile = Bun.file(ARCHIVE)
-const existing: { launches: Launch[] } = (await archiveFile.exists()) ? await archiveFile.json() : { launches: [] }
-const past = mergeArchive(existing.launches, previous)
-// WHY: pretty-printed, one launch per diff hunk, so each archive commit reads as "this launch flew".
+const seed: { launches: Launch[] } = (await archiveFile.exists()) ? await archiveFile.json() : { launches: [] }
+// WHY: CI never commits (only Hiba pushes), so the archive carries over through the deployed site: the live past.json is
+// merged in, then the committed seed, then today's flown launches. A missing or failed live copy just means no carry-over.
+const live: { launches: Launch[] } = await fetch(`${SITE_URL}past.json`, { headers: { accept: 'application/json' } })
+  .then((r) => (r.ok ? (r.json() as Promise<{ launches: Launch[] }>) : { launches: [] }))
+  .catch(() => ({ launches: [] }))
+const past = mergeArchive(mergeArchive(live.launches, seed.launches), previous)
+// WHY: pretty-printed, one launch per diff hunk, so a commit of the seed reads as "these launches flew".
 await Bun.write(ARCHIVE, JSON.stringify({ launches: past }, null, 1))
 await Bun.write(PAST_OUT, JSON.stringify({ fetchedAt, launches: past }))
-console.log(`archive: ${past.length} flown launches (${past.length - existing.launches.length} new) in ${ARCHIVE.pathname}`)
+console.log(`archive: ${past.length} flown launches (${live.launches.length} carried over from the site, ${seed.launches.length} in data/past.json)`)
 
 type Launch = ReturnType<typeof toLaunch>

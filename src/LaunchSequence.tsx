@@ -103,8 +103,22 @@ export function LaunchSequence({ launch, now }: { launch: Launch; now: number })
         </>
       }
     >
-      {/* The stage: a full-bleed flight profile as the backdrop, the readout over its top-left corner, webcast style. */}
-      <div className="relative h-[300px] overflow-hidden bg-background sm:h-[420px]">
+      {/* The stage: a full-bleed flight profile as the backdrop, the readout over its top-left corner, webcast style.
+          WHY tabIndex: focus the stage and step events with the arrow keys, space to pause; the scrubber buttons stay for the mouse. */}
+      <div
+        className="relative h-[300px] overflow-hidden bg-background outline-none focus-visible:ring-1 focus-visible:ring-live sm:h-[420px]"
+        tabIndex={isLive ? -1 : 0}
+        aria-label="Launch sequence. Left and right arrows step through events, space plays or pauses."
+        onKeyDown={(ev) => {
+          if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+            ev.preventDefault()
+            jump(Math.max(0, Math.min(n - 1, idx + (ev.key === 'ArrowRight' ? 1 : -1))))
+          } else if (ev.key === ' ') {
+            ev.preventDefault()
+            setPlaying((p) => !p)
+          }
+        }}
+      >
         <LaunchStage vehicle={launch.vehicle} events={events} current={idx} pose={pose} renderRef={renderRef} label={`${launch.vehicle.name} at ${current.abbrev}: ${current.description}`} />
         {/* WHY: the clock sits over the diagram; a corner scrim keeps it legible without dimming the rest of the profile. */}
         <div aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-72 w-[46rem] max-w-full bg-[radial-gradient(ellipse_at_top_left,var(--card)_30%,transparent_72%)]" />

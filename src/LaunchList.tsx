@@ -4,7 +4,7 @@ import { countdownText, siteName, type Launch } from './launches'
 import { Panel } from './Panel'
 import { Photo } from './Photo'
 import { StatusBadge } from './StatusBadge'
-import { LOCAL } from './time'
+import { LOG_TIME } from './time'
 
 export function LaunchList({ launches, now }: { launches: Launch[]; now: number }) {
   return (
@@ -66,8 +66,8 @@ export function RecentList({ launches }: { launches: Launch[] }) {
               <Photo image={launch.image} thumb alt="" width={64} height={64} className="h-16 w-16 shrink-0 object-cover opacity-75 transition-opacity group-hover:opacity-100" />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-start justify-between gap-3">
-                  <time dateTime={launch.net} className="text-sm text-muted-foreground">
-                    {LOCAL.format(new Date(launch.net))}
+                  <time dateTime={launch.net} className="text-sm whitespace-nowrap text-muted-foreground">
+                    {LOG_TIME.format(new Date(launch.net))}
                   </time>
                   <StatusBadge status={launch.status} />
                 </div>

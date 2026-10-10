@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Hero } from './Hero'
 import { LaunchList, RecentList } from './LaunchList'
-import { padsOf } from './launches'
+import { padsOf, tabTitle } from './launches'
 import { Panel } from './Panel'
 import type { LaunchFeed } from './useLaunches'
 
@@ -38,7 +38,7 @@ export function Home({ feed, past, error, now }: { feed: LaunchFeed | null; past
   const pads = useMemo(() => padsOf(launches ?? []), [launches])
   return (
     <>
-      <title>Space Launches · next 20 orbital launches</title>
+      <title>{next ? tabTitle(next, now) : 'Space Launches · next 20 orbital launches'}</title>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
         {next ? (
           <Hero launch={next} now={now} />
