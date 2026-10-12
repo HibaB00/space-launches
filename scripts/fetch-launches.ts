@@ -16,8 +16,14 @@ const OUT = new URL('../public/launches.json', import.meta.url)
 const ICS_OUT = new URL('../public/launches.ics', import.meta.url)
 const PAST_OUT = new URL('../public/past.json', import.meta.url)
 
+// WHY: the free tier is 15 requests/hour *per IP*, and GitHub's runners share IPs with other people's jobs, so a build
+// can be rate-limited by a stranger. A free Launch Library key (ll.thespacedevs.com) ties the quota to the key instead,
+// at ~300/hour. Optional: without LL2_API_KEY the script behaves exactly as before (local dev needs no key).
+const headers: Record<string, string> = { accept: 'application/json' }
+if (process.env.LL2_API_KEY) headers.authorization = `Token ${process.env.LL2_API_KEY}`
+
 async function fetchLaunches(url: string): Promise<LL2Launch[]> {
-  const res = await fetch(url, { headers: { accept: 'application/json' } })
+  const res = await fetch(url, { headers })
   if (!res.ok) {
     // WHY: exit non-zero so the CI job fails and the *previous* deployment stays live.
     // Writing an empty file here would deploy a blank site over a working one.
@@ -39,7 +45,7 @@ const previous = (await fetchLaunches(PREVIOUS)).map(toLaunch)
 // WHY: nothing is committed (only Hiba pushes), so the archive carries over through the deployed site: the live past.json
 // is merged with whatever this machine already has, then today's flown launches. A missing live copy just means no carry-over.
 const local: { launches: Launch[] } = (await Bun.file(PAST_OUT).exists()) ? await Bun.file(PAST_OUT).json() : { launches: [] }
-const live: { launches: Launch[] } = await fetch(`${SITE_URL}past.json`, { headers: { accept: 'application/json' } })
+const live: { launches: Launch[] } = await fetch(`${SITE_URL}past.json`, { headers: { accept: 'application/json' } }) // the site, not LL2: no key
   .then((r) => (r.ok ? (r.json() as Promise<{ launches: Launch[] }>) : { launches: [] }))
   .catch(() => ({ launches: [] }))
 const past = mergeArchive(mergeArchive(local.launches, live.launches), previous)

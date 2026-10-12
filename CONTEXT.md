@@ -68,7 +68,7 @@ Vocabulary used in code, UI and tickets. Aerospace terms first, then project/sof
 - **Launch (view model)**: the trimmed record our UI reads (`src/launches.ts`), produced from an LL2 record by `toLaunch()` in the fetch script. Upstream shape never reaches the browser.
 - **Build-time data / JAMstack**: data is fetched when the site is built, not when a visitor loads it. The site is static; a scheduled rebuild makes it "dynamic".
 - **Cron workflow**: a GitHub Actions job triggered on a schedule (`*/30 * * * *` = every 30 min).
-- **Rate limit (per IP)**: LL2 allows 15 requests/hour per client IP on the free tier. Fetching at build time means one IP (the CI runner) spends ~2/hour.
+- **Rate limit (per IP)**: LL2 allows 15 requests/hour per client IP on the free tier. Fetching at build time means one IP (the CI runner) spends ~4/hour (two feeds, twice an hour). Runners share IPs, so an optional **API key** (`LL2_API_KEY` secret, `Authorization: Token` header) ties the quota to us instead.
 - **CORS**: browser rule requiring a server to opt in (`Access-Control-Allow-Origin`) before a page from another origin may read its response. LL2 opts in (`*`), but we don't rely on it.
 - **Design tokens**: named CSS custom properties (`--background`, `--radius`) that every component reads; change once, restyle everything.
 - **Tabular figures**: digits of equal width (`font-variant-numeric: tabular-nums`) so a ticking clock doesn't jitter.
